@@ -33,7 +33,12 @@ async function handleStartCapture(tabId: number) {
       streamId
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    // Ignore error if stream is already active
+    if (error.message && error.message.includes('active stream')) {
+      // console.log('Stream already active for tab', tabId);
+      return;
+    }
     console.error('Failed to start capture:', error);
   }
 }
