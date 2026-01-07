@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Header from '@/components/Header.svelte';
+  import Footer from '@/components/Footer.svelte';
   import CurrentTabInfo from '@/components/CurrentTabInfo.svelte';
   import DeviceSelector from '@/components/DeviceSelector.svelte';
   import VolumeControl from '@/components/VolumeControl.svelte';
@@ -15,6 +16,7 @@
   let isLoading = true;
   let permissionDenied = false;
   let isCaptureActive = false;
+  let status: 'Ready' | 'Capturing' | 'Error' = 'Ready';
 
   onMount(async () => {
     try {
@@ -102,6 +104,7 @@
     if (!currentTab?.id) return;
     if (isCaptureActive) return;
 
+    status = 'Capturing';
     chrome.runtime.sendMessage({
       type: 'START_CAPTURE',
       tabId: currentTab.id
@@ -148,10 +151,10 @@
   }
 </script>
 
-<div class="w-[350px] min-h-[400px] bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-sans">
+<div class="w-[350px] min-h-[400px] bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-sans flex flex-col">
   <Header />
   
-  <main class="p-4 space-y-6">
+  <main class="p-4 space-y-6 flex-grow">
     {#if isLoading}
       <div class="flex justify-center py-8">
         <span class="text-gray-500">Loading...</span>
@@ -196,8 +199,10 @@
       <div class="text-center py-8 text-gray-500">
         No active tab found.
       </div>
-    {/if}
+    {/if    }
   </main>
+  
+  <Footer {status} />
 </div>
 
 <style>
