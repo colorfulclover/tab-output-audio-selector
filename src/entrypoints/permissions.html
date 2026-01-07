@@ -34,13 +34,17 @@
         font-size: 1rem;
       }
       button:hover { background-color: #1d4ed8; }
+      .message { margin-top: 1rem; font-size: 0.9rem; }
+      .success { color: #16a34a; }
+      .error { color: #dc2626; }
     </style>
   </head>
   <body>
     <div class="card">
       <h1>Audio Output Permission</h1>
       <p>Please grant permission to access audio devices. This is required to detect available speakers and headphones.</p>
-      <button id="grant">Grant Permission</button>
+      <button id="requestPermissionBtn">Grant Permission</button>
+      <div id="statusMessage"></div>
     </div>
     <script type="module" src="../utils/permissions.ts"></script>
   </body>

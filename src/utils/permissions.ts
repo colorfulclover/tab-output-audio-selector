@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
 
       } catch (error: any) {
-        statusMessage.textContent = t('permissionDenied');
+        // Show detailed error message
+        statusMessage.textContent = `${t('permissionDenied')} (${error.name || 'UnknownError'}: ${error.message || 'No details'})`;
         statusMessage.className = 'message error';
         console.error('Permission request failed:', error);
       }
