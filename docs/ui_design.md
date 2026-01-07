@@ -36,12 +36,10 @@
 ```
 App.svelte (Root)
 ├── Header.svelte         # タイトルバー
-├── PermissionAlert.svelte # 権限未取得時の警告・アクション
 ├── CurrentTabInfo.svelte # 現在のタブ情報 (Favicon, Title)
-├── AudioController.svelte # メイン制御コンテナ
-│   ├── DeviceSelector.svelte # select要素またはカスタムドロップダウン
-│   └── VolumeControl.svelte  # input[type=range] + Mute Button
-└── Footer.svelte         # ステータスバー
+├── DeviceSelector.svelte # デバイス選択ドロップダウン（権限リクエストボタンも内包）
+├── VolumeControl.svelte  # 音量スライダー + ミュートボタン
+└── Footer.svelte         # ステータスバー・バージョン情報
 ```
 
 ## 3. 状態管理 (State Management)
