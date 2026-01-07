@@ -1,11 +1,51 @@
-# tab-output-audio-selector
-An extension for Google Chrome that allows you to switch audio output sources for each browser tab.
+# Tab Audio Selector
 
+Tab Audio Selector は、Google Chrome ブラウザのタブごとにオーディオ出力デバイス（スピーカー、ヘッドフォンなど）と音量を個別に制御できる Chrome 拡張機能です。
 
-# WXT + Svelte
+## 特徴 (Features)
 
-This template should help get you started developing with Svelte in WXT.
+*   **タブごとの出力先切り替え**: 特定のタブの音声だけを別のスピーカーやヘッドフォンに出力できます。
+*   **個別音量コントロール**: タブごとに音量を調整したり、ミュートにしたりできます。
+*   **設定の自動保存**: サイトごとの出力設定を記憶し、次回訪問時に自動的に適用します。
+*   **多言語対応**: 日本語と英語に対応しています。
 
-## Recommended IDE Setup
+## インストール方法 (Installation)
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+現在は開発中のため、ソースコードからの読み込みが必要です。
+
+1.  このリポジトリをクローンまたはダウンロードします。
+2.  依存関係をインストールし、ビルドします。
+    ```bash
+    pnpm install
+    pnpm build
+    ```
+3.  Chrome ブラウザを開き、`chrome://extensions` にアクセスします。
+4.  右上の「デベロッパーモード」をオンにします。
+5.  「パッケージ化されていない拡張機能を読み込む」をクリックし、プロジェクト内の `.output/chrome-mv3` ディレクトリを選択します。
+
+## 使い方 (Usage)
+
+1.  音声出力先を変更したいタブを開きます（例: YouTube, Spotify）。
+2.  ツールバーの Tab Audio Selector アイコンをクリックします。
+3.  **Output Device** ドロップダウンから、出力したいデバイスを選択します。
+    *   ※ 初回のみ、デバイス名を取得するためにマイクへのアクセス権限が必要です。「権限を許可 (Grant Permission)」ボタンが表示された場合は、指示に従って許可してください。
+4.  **Volume** スライダーで音量を調整します。
+
+## 開発者向け情報 (Development)
+
+### 技術スタック
+*   [WXT](https://wxt.dev/) - Web Extension Framework
+*   [Svelte 5](https://svelte.dev/) - UI Library
+*   [Tailwind CSS v4](https://tailwindcss.com/) - Styling
+*   TypeScript
+
+### コマンド
+*   `pnpm dev`: 開発サーバーを起動（HMR有効）
+*   `pnpm build`: 本番用ビルド
+*   `pnpm compile`: コンパイルのみ実行
+
+## ライセンス (License)
+
+[MIT License](LICENSE)
+
+&copy; 2026 colorfulclover
