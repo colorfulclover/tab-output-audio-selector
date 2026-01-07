@@ -1,0 +1,52 @@
+{
+  "extName": {
+    "message": "Tab Audio Selector",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Control audio output device and volume for each tab.",
+    "description": "Extension description"
+  },
+  "loading": {
+    "message": "Loading..."
+  },
+  "noActiveTab": {
+    "message": "No active tab found."
+  },
+  "permissionNeeded": {
+    "message": "Permission needed to see device names."
+  },
+  "grantPermission": {
+    "message": "Grant Permission"
+  },
+  "outputDevice": {
+    "message": "Output Device"
+  },
+  "volume": {
+    "message": "Volume"
+  },
+  "defaultDevice": {
+    "message": "Default"
+  },
+  "unknownDevice": {
+    "message": "Unknown Device"
+  },
+  "permissionPageTitle": {
+    "message": "Audio Output Permission"
+  },
+  "permissionPageDesc": {
+    "message": "Please grant permission to access audio devices. This is required to detect available speakers and headphones."
+  },
+  "permissionGranted": {
+    "message": "Permission granted! You can close this tab."
+  },
+  "permissionDenied": {
+    "message": "Permission denied. Please try again."
+  },
+  "statusReady": { "message": "Ready" },
+  "statusCapturing": { "message": "Capturing" },
+  "statusError": { "message": "Error" },
+  "statusDeviceError": { "message": "Device Error" },
+  "statusPermissionError": { "message": "Permission Error" }
+}
+

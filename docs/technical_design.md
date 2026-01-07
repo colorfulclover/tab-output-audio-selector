@@ -16,12 +16,20 @@ root/
   ├── components/            # Svelte Components
   │   ├── Header.svelte
   │   ├── DeviceSelector.svelte
-  │   └── VolumeControl.svelte
+  │   ├── VolumeControl.svelte
+  │   ├── CurrentTabInfo.svelte
+  │   └── Footer.svelte
   ├── utils/                 # Shared Utilities
   │   ├── messaging.ts       # Type-safe Message Passing
   │   ├── storage.ts         # Storage Wrapper
   │   ├── offscreen-handler.ts # Offscreen Logic
-  │   └── permissions.ts     # Permission Page Logic
+  │   ├── permissions.ts     # Permission Page Logic
+  │   └── i18n.ts            # Internationalization Helper
+  ├── public/
+  │   ├── _locales/          # i18n Locales
+  │   │   ├── en/            # English Messages
+  │   │   └── ja/            # Japanese Messages
+  │   └── icon/              # App Icons
   └── wxt.config.ts          # WXT Configuration
 ```
 
@@ -56,6 +64,7 @@ export type ExtensionMessage =
 *   **UI Library**: Svelte 5 (Runes mode)
 *   **Styling**: Tailwind CSS v4
 *   **Runtime**: Node.js / pnpm / mise
+*   **Internationalization**: Chrome i18n API (`messages.json`)
 
 ## 4. ストレージスキーマ (`chrome.storage.local`)
 ```typescript
@@ -75,6 +84,9 @@ interface StorageSchema {
     ```typescript
     export default defineConfig({
       manifest: {
+        default_locale: "ja",
+        name: "__MSG_extName__",
+        description: "__MSG_extDescription__",
         permissions: [
           "activeTab",
           "storage",
@@ -88,3 +100,11 @@ interface StorageSchema {
       }
     });
     ```
+
+## 6. 多言語化対応 (Internationalization)
+*   **サポート言語**: 日本語 (ja), 英語 (en)
+*   **デフォルト言語**: 日本語 (ja)
+*   **実装方法**:
+    *   `public/_locales/{lang}/messages.json` に翻訳リソースを配置。
+    *   マニフェストファイル (`wxt.config.ts`) では `__MSG_key__` プレースホルダーを使用。
+    *   UIコンポーネント内では `chrome.i18n.getMessage` (ヘルパー: `src/utils/i18n.ts`) を使用して動的にテキストを取得。

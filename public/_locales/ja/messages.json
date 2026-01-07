@@ -1,0 +1,50 @@
+{
+  "extName": {
+    "message": "Tab Audio Selector"
+  },
+  "extDescription": {
+    "message": "タブごとの音声出力先と音量を制御します。"
+  },
+  "loading": {
+    "message": "読み込み中..."
+  },
+  "noActiveTab": {
+    "message": "アクティブなタブが見つかりません。"
+  },
+  "permissionNeeded": {
+    "message": "デバイス名を表示するには権限が必要です。"
+  },
+  "grantPermission": {
+    "message": "権限を許可"
+  },
+  "outputDevice": {
+    "message": "出力デバイス"
+  },
+  "volume": {
+    "message": "音量"
+  },
+  "defaultDevice": {
+    "message": "既定のデバイス"
+  },
+  "unknownDevice": {
+    "message": "不明なデバイス"
+  },
+  "permissionPageTitle": {
+    "message": "音声出力の権限設定"
+  },
+  "permissionPageDesc": {
+    "message": "オーディオデバイスにアクセスする権限を許可してください。これはスピーカーやヘッドフォンを検出するために必要です。"
+  },
+  "permissionGranted": {
+    "message": "許可されました！このタブを閉じてください。"
+  },
+  "permissionDenied": {
+    "message": "拒否されました。もう一度お試しください。"
+  },
+  "statusReady": { "message": "準備完了" },
+  "statusCapturing": { "message": "キャプチャ中" },
+  "statusError": { "message": "エラー" },
+  "statusDeviceError": { "message": "デバイスエラー" },
+  "statusPermissionError": { "message": "権限エラー" }
+}
+

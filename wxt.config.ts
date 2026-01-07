@@ -4,7 +4,10 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-svelte'],
-  manifest: {
+    manifest: {
+    default_locale: "ja",
+    name: "__MSG_extName__",
+    description: "__MSG_extDescription__",
     permissions: [
       "activeTab",
       "storage",
@@ -16,7 +19,7 @@ export default defineConfig({
       "<all_urls>"
     ],
     action: {
-      default_title: "Tab Audio Selector"
+      default_title: "__MSG_extName__"
     },
     icons: {
       16: '/icon/16.png',

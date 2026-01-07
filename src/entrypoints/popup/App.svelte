@@ -7,6 +7,7 @@
   import VolumeControl from '@/components/VolumeControl.svelte';
   import type { DeviceInfo, TabInfo } from '@/utils/messaging';
   import { getAudioSettings, saveAudioSettings } from '@/utils/storage';
+  import { t } from '@/utils/i18n';
 
   let currentTab: TabInfo | null = null;
   let devices: DeviceInfo[] = [];
@@ -65,10 +66,10 @@
       
       devices = audioOutputs.map(d => ({
         deviceId: d.deviceId,
-        label: d.label || (d.deviceId === 'default' ? 'Default' : `Unknown Device (${d.deviceId.slice(0, 4)}...)`)
+        label: d.label || (d.deviceId === 'default' ? t('defaultDevice') : `${t('unknownDevice')} (${d.deviceId.slice(0, 4)}...)`)
       }));
 
-      const hasLabels = devices.some(d => d.label && d.label !== 'Default' && !d.label.startsWith('Unknown'));
+      const hasLabels = devices.some(d => d.label && d.label !== t('defaultDevice') && !d.label.startsWith(t('unknownDevice')));
       permissionDenied = !hasLabels && devices.length > 0;
 
     } catch (e) {
@@ -157,7 +158,7 @@
   <main class="p-4 space-y-6 flex-grow">
     {#if isLoading}
       <div class="flex justify-center py-8">
-        <span class="text-gray-500">Loading...</span>
+        <span class="text-gray-500">{t('loading')}</span>
       </div>
     {:else if currentTab}
       <CurrentTabInfo 
@@ -169,13 +170,13 @@
       {#if permissionDenied}
         <div class="p-3 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
           <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-            Permission needed to see device names.
+            {t('permissionNeeded')}
           </p>
           <button 
             on:click={requestPermission}
             class="text-xs px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-full transition-colors"
           >
-            Grant Permission
+            {t('grantPermission')}
           </button>
         </div>
       {/if}
@@ -197,9 +198,9 @@
       </div>
     {:else}
       <div class="text-center py-8 text-gray-500">
-        No active tab found.
+        {t('noActiveTab')}
       </div>
-    {/if    }
+    {/if}
   </main>
   
   <Footer {status} />

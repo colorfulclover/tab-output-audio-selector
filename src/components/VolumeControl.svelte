@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { t } from '@/utils/i18n';
 
   export let volume: number = 1.0; // 0.0 to 1.0
   export let muted: boolean = false;
@@ -23,7 +24,7 @@
 
 <div class="volume-control space-y-2">
   <div class="flex items-center justify-between">
-    <label for="volume-slider" class="text-sm font-medium text-gray-700 dark:text-gray-300">Volume</label>
+    <label for="volume-slider" class="text-sm font-medium text-gray-700 dark:text-gray-300">{t('volume')}</label>
     <span class="text-xs text-gray-500 dark:text-gray-400">{Math.round(volume * 100)}%</span>
   </div>
   

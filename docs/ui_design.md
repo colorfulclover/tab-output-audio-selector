@@ -3,6 +3,7 @@
 ## 1. 画面レイアウト (Screen Layout)
 ### 1.1 ポップアップ画面構成 (Wireframe)
 シンプルなシングルカラムレイアウトを採用。
+UIテキストは `chrome.i18n` により、ブラウザの言語設定（日本語/英語）に合わせて自動的に切り替わる。
 
 ```
 +--------------------------------------------------+
@@ -13,7 +14,8 @@
 |  Url: youtube.com                                |
 +--------------------------------------------------+
 |  [Alert Area] (Permission Warning if needed)     |
-|  ⚠ デバイス名を取得するには権限が必要です [許可] |
+|  ⚠ デバイス名を表示するには権限が必要です [許可] |
+|  (Permission needed to see device names)         |
 +--------------------------------------------------+
 |  [Control Panel]                                 |
 |                                                  |
@@ -28,7 +30,8 @@
 |  [ ] Mute                                        |
 +--------------------------------------------------+
 |  [Footer]                                        |
-|  Status: Connected | v1.0.0                      |
+|  (●) Ready | Tab Audio Selector v1.0.0           |
+|  © 2026 colorfulclover                           |
 +--------------------------------------------------+
 ```
 
@@ -48,20 +51,24 @@ App.svelte (Root)
 *   **`$audioSettings`**: `{ deviceId: string, volume: number, muted: boolean }`
 *   **`$devices`**: `MediaDeviceInfo[]` (label, deviceId)
 *   **`$permissionStatus`**: `'granted' | 'prompt' | 'denied'`
+*   **`$status`**: `'Ready' | 'Capturing' | 'Error'` 等のアプリ状態
 
 ### 3.2 UI状態遷移
-*   **Initializing**: Popup起動時。スピナーを表示。
-*   **NoMediaFound**: タブ内でメディア要素が見つからない場合。コントローラーをDisabledにし、「メディアが見つかりません」と表示。
+*   **Initializing**: Popup起動時。スピナーを表示 (`Loading...` / `読み込み中...`)。
+*   **NoMediaFound**: タブ内でメディア要素が見つからない場合。
 *   **PermissionRequired**: デバイスラベルが空の場合。`PermissionAlert` を表示し、デバイス選択を一時的にロック（またはIDのみ表示）。
 
 ## 4. インタラクションフロー
 1.  **Popup Open**:
     *   `background` から現在のタブ情報を取得。
-    *   `content script` から現在のオーディオ設定を取得（非同期）。
-2.  **Device Change**:
+    *   `storage` から現在のオーディオ設定を取得。
+    *   設定が存在する場合、自動的に `START_CAPTURE` を送信してキャプチャを開始。
+2.  **Permission Request**:
+    *   「権限を許可」ボタン押下 -> 新しいタブ (`permissions.html`) を開く。
+    *   ユーザーがマイク権限を許可 -> タブが自動的に閉じる -> Popupを再度開くとデバイス名が表示される。
+3.  **Device Change**:
     *   ドロップダウン変更 -> 即座に `$audioSettings` を更新 -> `SET_DEVICE` メッセージ送信。
-    *   失敗時（エラー応答）は元の値に戻し、Toastエラー表示。
-3.  **Volume Change**:
+4.  **Volume Change**:
     *   スライダー操作 -> `input` イベントで即座にメッセージ送信（Throttling 100ms）。
     *   `change` イベント（操作終了）でストレージへの保存トリガー。
 
@@ -71,4 +78,4 @@ App.svelte (Root)
     *   **Light**: Bg `#ffffff`, Text `#333333`, Accent `#3b82f6` (Blue-500)
     *   **Dark**: Bg `#1f2937` (Gray-800), Text `#f3f4f6`, Accent `#60a5fa` (Blue-400)
 *   **サイズ**: `width: 350px`, `min-height: 400px`
-
+*   **多言語化**: すべてのUIテキストは `src/utils/i18n.ts` を通じて `_locales` から取得する。
