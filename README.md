@@ -1,50 +1,66 @@
 # Tab Audio Selector
 
-Tab Audio Selector は、Google Chrome ブラウザのタブごとにオーディオ出力デバイス（スピーカー、ヘッドフォンなど）と音量を個別に制御できる Chrome 拡張機能です。
+[English](./README.md) | [日本語](./README_jp.md)
 
-## 特徴 (Features)
+Tab Audio Selector is a Chrome extension that allows you to individually control audio output devices (speakers, headphones, etc.) and volume for each Google Chrome browser tab.
 
-*   **タブごとの出力先切り替え**: 特定のタブの音声だけを別のスピーカーやヘッドフォンに出力できます。
-*   **個別音量コントロール**: タブごとに音量を調整したり、ミュートにしたりできます。
-*   **設定の自動保存**: サイトごとの出力設定を記憶し、次回訪問時に自動的に適用します。
-*   **多言語対応**: 日本語と英語に対応しています。
+## Features
 
-## インストール方法 (Installation)
+*   **Tab-specific Output Switching**: Output audio from specific tabs to different speakers or headphones.
+*   **Individual Volume Control**: Adjust volume or mute each tab independently.
+*   **Auto-save Settings**: Remembers output settings for each site and automatically applies them on next visit.
+*   **Multilingual Support**: Supports English and Japanese.
 
-現在は開発中のため、ソースコードからの読み込みが必要です。
+## Installation
 
-1.  このリポジトリをクローンまたはダウンロードします。
-2.  依存関係をインストールし、ビルドします。
+Currently in development, requires loading from source code.
+
+1.  Clone or download this repository.
+2.  Install dependencies and build.
     ```bash
     pnpm install
     pnpm build
     ```
-3.  Chrome ブラウザを開き、`chrome://extensions` にアクセスします。
-4.  右上の「デベロッパーモード」をオンにします。
-5.  「パッケージ化されていない拡張機能を読み込む」をクリックし、プロジェクト内の `.output/chrome-mv3` ディレクトリを選択します。
+3.  Open Chrome browser and go to `chrome://extensions`.
+4.  Turn on "Developer mode" in the top right.
+5.  Click "Load unpacked" and select the `.output/chrome-mv3` directory in the project.
 
-## 使い方 (Usage)
+## Usage
 
-1.  音声出力先を変更したいタブを開きます（例: YouTube, Spotify）。
-2.  ツールバーの Tab Audio Selector アイコンをクリックします。
-3.  **Output Device** ドロップダウンから、出力したいデバイスを選択します。
-    *   ※ 初回のみ、デバイス名を取得するためにマイクへのアクセス権限が必要です。「権限を許可 (Grant Permission)」ボタンが表示された場合は、指示に従って許可してください。
-4.  **Volume** スライダーで音量を調整します。
+1.  Open the tab where you want to change audio output (e.g., YouTube, Spotify).
+2.  Click the Tab Audio Selector icon in the toolbar.
+3.  Select the desired device from the **Output Device** dropdown.
+    *   *Note: Microphone permission is required only once to get device names. If the "Grant Permission" button appears, please follow the instructions to allow it.*
+4.  Adjust volume with the **Volume** slider.
 
-## 開発者向け情報 (Development)
+## Documentation
 
-### 技術スタック
+> **Note:** Detailed documentation is currently available only in Japanese.
+
+This project is developed based on the following design documents.
+
+*   **Requirement Definition**: [Requirement Definition](./docs/requirement_definition.md)
+*   **Basic Design**: [Basic Design](./docs/basic_design.md)
+*   **Functional Specification**: [Functional Specification](./docs/functional_specification.md)
+*   **Technical Design**: [Technical Design](./docs/technical_design.md)
+*   **UI Design**: [UI Design](./docs/ui_design.md)
+*   **Test Specification**: [Test Specification](./docs/test_specification.md)
+*   **Store Description**: [Store Description](./docs/store_description.md)
+*   **Privacy Policy**: [Privacy Practices](./docs/privacy_practices.md)
+
+## Development
+
+### Tech Stack
 *   [WXT](https://wxt.dev/) - Web Extension Framework
 *   [Svelte 5](https://svelte.dev/) - UI Library
 *   [Tailwind CSS v4](https://tailwindcss.com/) - Styling
 *   TypeScript
 
-### コマンド
-*   `pnpm dev`: 開発サーバーを起動（HMR有効）
-*   `pnpm build`: 本番用ビルド
-*   `pnpm compile`: コンパイルのみ実行
+### Commands
+*   `pnpm dev`: Start dev server (HMR enabled)
+*   `pnpm build`: Production build
 
-## ライセンス (License)
+## License
 
 [MIT License](LICENSE)
 
