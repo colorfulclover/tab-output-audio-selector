@@ -1,36 +1,42 @@
-import { ExtensionMessage } from '@/utils/messaging';
+import type { ExtensionMessage } from '@/utils/messaging';
+import { loadCaptureSettings } from '@/utils/capture-settings';
+import { getAudioSettings } from '@/utils/storage';
 
 export default defineBackground(() => {
   // Setup offscreen document
   setupOffscreenDocument('offscreen.html');
 
-  chrome.runtime.onMessage.addListener(async (message: ExtensionMessage, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener(async (message: ExtensionMessage) => {
     // Forward messages to offscreen document
     // We handle START_CAPTURE specially to get the streamId first
     if (message.type === 'START_CAPTURE') {
       await setupOffscreenDocument('offscreen.html');
-      handleStartCapture(message.tabId);
+      await handleStartCapture(message.tabId);
     } else if (
       message.type === 'SET_VOLUME' || 
       message.type === 'SET_DEVICE'
     ) {
-      chrome.runtime.sendMessage(message);
+      await setupOffscreenDocument('offscreen.html');
+      await chrome.runtime.sendMessage(message);
     }
   });
 });
 
 async function handleStartCapture(tabId: number) {
   try {
-    // 1. Get Stream ID
-    const streamId = await chrome.tabCapture.getMediaStreamId({
-      targetTabId: tabId
-    });
+    const [streamId, settings] = await Promise.all([
+      chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }),
+      loadCaptureSettings(tabId, {
+        getTab: (id) => chrome.tabs.get(id),
+        getAudioSettings,
+      }),
+    ]);
 
-    // 2. Send to Offscreen
     await chrome.runtime.sendMessage({
       type: 'START_CAPTURE',
       tabId,
-      streamId
+      streamId,
+      settings,
     });
 
   } catch (error: any) {
@@ -63,7 +69,7 @@ async function setupOffscreenDocument(path: string) {
   } else {
     creating = chrome.offscreen.createDocument({
       url: path,
-      reasons: [chrome.offscreen.Reason.AUDIO_PLAYBACK],
+      reasons: [chrome.offscreen.Reason.USER_MEDIA],
       justification: 'Capture tab audio for volume and output control',
     });
     await creating;
