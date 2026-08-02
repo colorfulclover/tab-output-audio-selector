@@ -1,9 +1,17 @@
 import type { AudioSettings } from '@/utils/messaging';
 
-interface SavedAudioSettings {
+export interface SavedAudioSettings {
   deviceId: string | null;
   volume: number;
   muted: boolean;
+}
+
+export function hasNonDefaultAudioSettings(settings: SavedAudioSettings | null): boolean {
+  return !!settings && (
+    (!!settings.deviceId && settings.deviceId !== 'default') ||
+    settings.volume !== 1 ||
+    settings.muted
+  );
 }
 
 interface CaptureSettingsDependencies {

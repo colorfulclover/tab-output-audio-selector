@@ -6,6 +6,8 @@ let getUserMedia;
 let contexts = [];
 let audioElements = [];
 let events = [];
+let runtimeMessages = [];
+let setSinkError = null;
 
 class FakeTrack {
   endedListener;
@@ -79,6 +81,7 @@ class FakeAudio {
   async setSinkId(deviceId) {
     this.sinkIds.push(deviceId);
     events.push(`sink:${deviceId}`);
+    if (setSinkError) throw setSinkError;
   }
 
   async play() {
@@ -91,6 +94,9 @@ class FakeAudio {
 
 globalThis.chrome = {
   runtime: {
+    async sendMessage(message) {
+      runtimeMessages.push(message);
+    },
     onMessage: {
       addListener(listener) {
         messageListener = listener;
@@ -115,6 +121,8 @@ function resetFakes() {
   contexts = [];
   audioElements = [];
   events = [];
+  runtimeMessages = [];
+  setSinkError = null;
 }
 
 function createDeferred() {
@@ -129,7 +137,7 @@ test('applies restored settings after the audio session is created', async () =>
   resetFakes();
   getUserMedia = async () => new FakeStream();
 
-  await messageListener({
+  const result = await messageListener({
     type: 'START_CAPTURE',
     tabId: 101,
     streamId: 'stream-101',
@@ -141,6 +149,24 @@ test('applies restored settings after the audio session is created', async () =>
     { value: 0.4, startTime: 5, timeConstant: 0.1 },
   ]);
   assert.deepEqual(events, ['sink:sink-a', 'play']);
+  assert.deepEqual(result, { status: 'active' });
+  assert.deepEqual(runtimeMessages, [{
+    type: 'CAPTURE_STATUS',
+    tabId: 101,
+    status: 'active',
+    error: undefined,
+  }]);
+});
+
+test('does not respond to capture requests that belong to the background', () => {
+  resetFakes();
+
+  const result = messageListener({
+    type: 'START_CAPTURE',
+    tabId: 102,
+  });
+
+  assert.equal(result, undefined);
 });
 
 test('keeps settings received while capture is not ready', async () => {
@@ -191,4 +217,114 @@ test('restores the saved sink and volume when capture is rebuilt', async () => {
   assert.deepEqual(contexts[1].gainCalls, [
     { value: 0.2, startTime: 5, timeConstant: 0.1 },
   ]);
+});
+
+test('returns an error when the tab stream cannot be created', async () => {
+  resetFakes();
+  getUserMedia = async () => {
+    throw new Error('getUserMedia failed');
+  };
+
+  const result = await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 404,
+    streamId: 'stream-404',
+    settings: { deviceId: 'sink-a', volume: 0.4, muted: false },
+  });
+
+  assert.deepEqual(result, { status: 'error', error: 'getUserMedia failed' });
+  assert.deepEqual(audioElements, []);
+  assert.deepEqual(runtimeMessages, [{
+    type: 'CAPTURE_STATUS',
+    tabId: 404,
+    status: 'error',
+    error: 'getUserMedia failed',
+  }]);
+});
+
+test('returns an error when the saved output device cannot be restored', async () => {
+  resetFakes();
+  getUserMedia = async () => new FakeStream();
+  setSinkError = new Error('setSinkId failed');
+
+  const result = await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 505,
+    streamId: 'stream-505',
+    settings: { deviceId: 'missing-sink', volume: 0.6, muted: false },
+  });
+
+  assert.deepEqual(result, { status: 'error', error: 'setSinkId failed' });
+  assert.deepEqual(audioElements[0].sinkIds, ['missing-sink']);
+  assert.equal(audioElements[0].playCalls, 0);
+  assert.deepEqual(runtimeMessages, [{
+    type: 'CAPTURE_STATUS',
+    tabId: 505,
+    status: 'error',
+    error: 'setSinkId failed',
+  }]);
+});
+
+test('reports an output-device change failure after capture is active', async () => {
+  resetFakes();
+  getUserMedia = async () => new FakeStream();
+
+  await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 506,
+    streamId: 'stream-506',
+    settings: { deviceId: 'sink-a', volume: 0.6, muted: false },
+  });
+  runtimeMessages = [];
+  setSinkError = new Error('setSinkId change failed');
+
+  const result = await messageListener({
+    type: 'SET_DEVICE',
+    tabId: 506,
+    deviceId: 'missing-sink',
+  });
+
+  assert.deepEqual(result, { status: 'error', error: 'setSinkId change failed' });
+  assert.deepEqual(runtimeMessages, [{
+    type: 'CAPTURE_STATUS',
+    tabId: 506,
+    status: 'error',
+    error: 'setSinkId change failed',
+  }]);
+});
+
+test('track end reports Needs action for only the affected tab', async () => {
+  resetFakes();
+  const firstStream = new FakeStream();
+  const secondStream = new FakeStream();
+  const streams = [firstStream, secondStream];
+  getUserMedia = async () => streams.shift();
+
+  await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 601,
+    streamId: 'stream-601',
+    settings: { deviceId: 'sink-one', volume: 0.5, muted: false },
+  });
+  await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 602,
+    streamId: 'stream-602',
+    settings: { deviceId: 'sink-two', volume: 0.7, muted: false },
+  });
+
+  firstStream.audioTrack.end();
+  await messageListener({ type: 'SET_VOLUME', tabId: 602, volume: 0.3, muted: false });
+
+  assert.deepEqual(runtimeMessages.filter((message) => message.status === 'needs_action'), [{
+    type: 'CAPTURE_STATUS',
+    tabId: 601,
+    status: 'needs_action',
+    error: undefined,
+  }]);
+  assert.deepEqual(contexts[1].gainCalls.at(-1), {
+    value: 0.3,
+    startTime: 5,
+    timeConstant: 0.1,
+  });
 });

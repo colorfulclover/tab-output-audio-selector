@@ -42,9 +42,12 @@
     "message": "拒否されました。もう一度お試しください。"
   },
   "statusReady": { "message": "準備完了" },
+  "statusRestoring": { "message": "復元中" },
   "statusCapturing": { "message": "キャプチャ中" },
+  "statusNeedsAction": { "message": "操作が必要" },
   "statusError": { "message": "エラー" },
   "statusDeviceError": { "message": "デバイスエラー" },
-  "statusPermissionError": { "message": "権限エラー" }
+  "statusPermissionError": { "message": "権限エラー" },
+  "actionNeedsTitle": { "message": "操作が必要です。保存済みの音声出力を復元するにはクリックしてください。" }
 }
 

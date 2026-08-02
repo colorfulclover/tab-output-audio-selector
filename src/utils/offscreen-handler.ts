@@ -1,4 +1,9 @@
-import type { AudioSettings, ExtensionMessage } from '@/utils/messaging';
+import type {
+  AudioSettings,
+  CaptureResult,
+  CaptureStatus,
+  ExtensionMessage,
+} from '@/utils/messaging';
 
 // Map tabId -> AudioContext/Nodes
 interface AudioSession {
@@ -18,17 +23,22 @@ const defaultSettings: AudioSettings = {
   muted: false,
 };
 
-chrome.runtime.onMessage.addListener(async (message: ExtensionMessage) => {
+chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   if (message.type === 'START_CAPTURE' && message.streamId) {
-    await startCapture(message.tabId, message.streamId, message.settings);
+    return startCapture(message.tabId, message.streamId, message.settings);
   } else if (message.type === 'SET_VOLUME') {
     setVolume(message.tabId, message.volume, message.muted);
+    return { status: sessions.has(message.tabId) ? 'active' : 'pending' } satisfies CaptureResult;
   } else if (message.type === 'SET_DEVICE') {
-    await setDevice(message.tabId, message.deviceId);
+    return setDevice(message.tabId, message.deviceId);
   }
 });
 
-async function startCapture(tabId: number, streamId: string, settings?: AudioSettings) {
+async function startCapture(
+  tabId: number,
+  streamId: string,
+  settings?: AudioSettings,
+): Promise<CaptureResult> {
   try {
     const pendingSettings = desiredSettings.get(tabId);
     desiredSettings.set(tabId, {
@@ -64,6 +74,7 @@ async function startCapture(tabId: number, streamId: string, settings?: AudioSet
       track.addEventListener('ended', () => {
         if (sessions.get(tabId)?.stream === stream) {
           stopCapture(tabId);
+          notifyCaptureStatus(tabId, 'needs_action');
         }
       });
     });
@@ -73,11 +84,31 @@ async function startCapture(tabId: number, streamId: string, settings?: AudioSet
     await audioElement.play();
 
     console.log(`Started capture for tab ${tabId}`);
+    notifyCaptureStatus(tabId, 'active');
+    return { status: 'active' };
 
   } catch (err) {
     stopCapture(tabId, false);
     console.error(`Failed to capture tab ${tabId}:`, err);
+    const error = getErrorMessage(err);
+    notifyCaptureStatus(tabId, 'error', error);
+    return { status: 'error', error };
   }
+}
+
+function notifyCaptureStatus(tabId: number, status: CaptureStatus, error?: string) {
+  void chrome.runtime.sendMessage({
+    type: 'CAPTURE_STATUS',
+    tabId,
+    status,
+    error,
+  } satisfies ExtensionMessage).catch((sendError) => {
+    console.error('Failed to report capture status:', sendError);
+  });
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function stopCapture(tabId: number, clearSettings = true) {
@@ -115,12 +146,20 @@ function applyVolume(tabId: number) {
   }
 }
 
-async function setDevice(tabId: number, deviceId: string) {
+async function setDevice(tabId: number, deviceId: string): Promise<CaptureResult> {
   desiredSettings.set(tabId, {
     ...desiredSettings.get(tabId),
     deviceId,
   });
-  await applyDevice(tabId);
+  try {
+    await applyDevice(tabId);
+    return { status: sessions.has(tabId) ? 'active' : 'pending' };
+  } catch (error) {
+    console.error('Failed to setSinkId on AudioElement', error);
+    const errorMessage = getErrorMessage(error);
+    notifyCaptureStatus(tabId, 'error', errorMessage);
+    return { status: 'error', error: errorMessage };
+  }
 }
 
 async function applyDevice(tabId: number) {
@@ -128,14 +167,10 @@ async function applyDevice(tabId: number) {
   const session = sessions.get(tabId);
   if (session && settings?.deviceId) {
     if (session.audioElement.setSinkId) {
-      try {
-        await session.audioElement.setSinkId(settings.deviceId);
-        console.log(`Set device for tab ${tabId} to ${settings.deviceId}`);
-      } catch (e) {
-        console.error('Failed to setSinkId on AudioElement', e);
-      }
+      await session.audioElement.setSinkId(settings.deviceId);
+      console.log(`Set device for tab ${tabId} to ${settings.deviceId}`);
     } else {
-      console.warn('HTMLMediaElement.prototype.setSinkId is not supported in this environment.');
+      throw new Error('HTMLMediaElement.prototype.setSinkId is not supported in this environment.');
     }
   }
 }

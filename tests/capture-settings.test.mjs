@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'vitest';
 
-import { loadCaptureSettings } from '../src/utils/capture-settings.ts';
+import {
+  hasNonDefaultAudioSettings,
+  loadCaptureSettings,
+} from '../src/utils/capture-settings.ts';
 
 test('offscreen documents use the USER_MEDIA lifecycle reason', async () => {
   const source = await readFile(
@@ -49,4 +52,33 @@ test('capture startup has no settings when the tab URL is unavailable', async ()
   });
 
   assert.equal(settings, undefined);
+});
+
+test('only non-default saved settings require capture restoration', () => {
+  assert.equal(hasNonDefaultAudioSettings(null), false);
+  assert.equal(hasNonDefaultAudioSettings({
+    deviceId: null,
+    volume: 1,
+    muted: false,
+  }), false);
+  assert.equal(hasNonDefaultAudioSettings({
+    deviceId: 'default',
+    volume: 1,
+    muted: false,
+  }), false);
+  assert.equal(hasNonDefaultAudioSettings({
+    deviceId: 'sink-a',
+    volume: 1,
+    muted: false,
+  }), true);
+  assert.equal(hasNonDefaultAudioSettings({
+    deviceId: 'default',
+    volume: 0.5,
+    muted: false,
+  }), true);
+  assert.equal(hasNonDefaultAudioSettings({
+    deviceId: 'default',
+    volume: 1,
+    muted: true,
+  }), true);
 });

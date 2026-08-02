@@ -1,58 +1,90 @@
-import type { ExtensionMessage } from '@/utils/messaging';
+import type { CaptureResult, CaptureStatus, ExtensionMessage } from '@/utils/messaging';
+import { createCaptureLifecycle } from '@/utils/capture-lifecycle';
 import { loadCaptureSettings } from '@/utils/capture-settings';
 import { getAudioSettings } from '@/utils/storage';
 
 export default defineBackground(() => {
-  // Setup offscreen document
-  setupOffscreenDocument('offscreen.html');
+  const lifecycle = createCaptureLifecycle({
+    queryTabs: () => chrome.tabs.query({}),
+    getCapturedTabs: () => chrome.tabCapture.getCapturedTabs(),
+    getAudioSettings,
+    loadCaptureSettings: (tabId) => loadCaptureSettings(tabId, {
+      getTab: (id) => chrome.tabs.get(id),
+      getAudioSettings,
+    }),
+    getMediaStreamId: async (tabId) => {
+      await setupOffscreenDocument('offscreen.html');
+      return chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
+    },
+    startOffscreenCapture: async (tabId, streamId, settings) => {
+      const result = await chrome.runtime.sendMessage({
+        type: 'START_CAPTURE',
+        tabId,
+        streamId,
+        settings,
+      } satisfies ExtensionMessage) as CaptureResult | undefined;
 
-  chrome.runtime.onMessage.addListener(async (message: ExtensionMessage) => {
-    // Forward messages to offscreen document
-    // We handle START_CAPTURE specially to get the streamId first
-    if (message.type === 'START_CAPTURE') {
-      await setupOffscreenDocument('offscreen.html');
-      await handleStartCapture(message.tabId);
-    } else if (
-      message.type === 'SET_VOLUME' || 
-      message.type === 'SET_DEVICE'
-    ) {
-      await setupOffscreenDocument('offscreen.html');
-      await chrome.runtime.sendMessage(message);
+      return result ?? { status: 'error', error: 'Offscreen document did not respond.' };
+    },
+    markNeedsAction,
+    clearIndicator,
+  });
+
+  chrome.runtime.onStartup.addListener(() => {
+    void lifecycle.handleStartup().catch((error) => {
+      console.error('Failed to restore startup indicators:', error);
+    });
+  });
+
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (changeInfo.url || changeInfo.status === 'complete') {
+      void lifecycle.handleTabUpdated(tab).catch((error) => {
+        console.error('Failed to update capture indicator:', error);
+      });
+    }
+  });
+
+  chrome.tabCapture.onStatusChanged.addListener((info) => {
+    if (info.status === 'stopped' || info.status === 'error') {
+      const status: CaptureStatus = info.status === 'error' ? 'error' : 'needs_action';
+      void lifecycle.handleCaptureStatus(info.tabId, status).catch((error) => {
+        console.error('Failed to update capture status:', error);
+      });
+    }
+  });
+
+  chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+    if (message.type === 'START_CAPTURE' && !message.streamId) {
+      return lifecycle.startCapture(message.tabId);
+    }
+
+    if (message.type === 'CAPTURE_STATUS') {
+      return lifecycle.handleCaptureStatus(message.tabId, message.status);
     }
   });
 });
 
-async function handleStartCapture(tabId: number) {
-  try {
-    const [streamId, settings] = await Promise.all([
-      chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }),
-      loadCaptureSettings(tabId, {
-        getTab: (id) => chrome.tabs.get(id),
-        getAudioSettings,
-      }),
-    ]);
+async function markNeedsAction(tabId: number) {
+  const title = chrome.i18n.getMessage('actionNeedsTitle') ||
+    'Needs action: click to restore saved audio output.';
 
-    await chrome.runtime.sendMessage({
-      type: 'START_CAPTURE',
-      tabId,
-      streamId,
-      settings,
-    });
+  await Promise.all([
+    chrome.action.setBadgeText({ tabId, text: '!' }),
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#d97706' }),
+    chrome.action.setTitle({ tabId, title }),
+  ]);
+}
 
-  } catch (error: any) {
-    // Ignore error if stream is already active
-    if (error.message && error.message.includes('active stream')) {
-      // console.log('Stream already active for tab', tabId);
-      return;
-    }
-    console.error('Failed to start capture:', error);
-  }
+async function clearIndicator(tabId: number) {
+  await Promise.all([
+    chrome.action.setBadgeText({ tabId, text: '' }),
+    chrome.action.setTitle({ tabId, title: chrome.runtime.getManifest().name }),
+  ]);
 }
 
 // Manage Offscreen Document lifecycle
 let creating: Promise<void> | null = null;
 async function setupOffscreenDocument(path: string) {
-  // Check if offscreen document already exists
   const offscreenUrl = chrome.runtime.getURL(path);
   const existingContexts = await chrome.runtime.getContexts({
     contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
@@ -63,7 +95,6 @@ async function setupOffscreenDocument(path: string) {
     return;
   }
 
-  // Create offscreen document
   if (creating) {
     await creating;
   } else {
@@ -72,7 +103,10 @@ async function setupOffscreenDocument(path: string) {
       reasons: [chrome.offscreen.Reason.USER_MEDIA],
       justification: 'Capture tab audio for volume and output control',
     });
-    await creating;
-    creating = null;
+    try {
+      await creating;
+    } finally {
+      creating = null;
+    }
   }
 }
