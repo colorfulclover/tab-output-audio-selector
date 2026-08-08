@@ -169,6 +169,28 @@ test('does not respond to capture requests that belong to the background', () =>
   assert.equal(result, undefined);
 });
 
+test('returns a Promise response for volume updates', async () => {
+  resetFakes();
+  getUserMedia = async () => new FakeStream();
+
+  await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 103,
+    streamId: 'stream-103',
+    settings: { deviceId: 'sink-a', volume: 0.8, muted: false },
+  });
+
+  const result = messageListener({
+    type: 'SET_VOLUME',
+    tabId: 103,
+    volume: 0.25,
+    muted: false,
+  });
+
+  assert.ok(result instanceof Promise);
+  assert.deepEqual(await result, { status: 'active' });
+});
+
 test('keeps settings received while capture is not ready', async () => {
   resetFakes();
   const media = createDeferred();

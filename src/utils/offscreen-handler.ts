@@ -28,7 +28,9 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     return startCapture(message.tabId, message.streamId, message.settings);
   } else if (message.type === 'SET_VOLUME') {
     setVolume(message.tabId, message.volume, message.muted);
-    return { status: sessions.has(message.tabId) ? 'active' : 'pending' } satisfies CaptureResult;
+    return Promise.resolve({
+      status: sessions.has(message.tabId) ? 'active' : 'pending',
+    } satisfies CaptureResult);
   } else if (message.type === 'SET_DEVICE') {
     return setDevice(message.tabId, message.deviceId);
   }
