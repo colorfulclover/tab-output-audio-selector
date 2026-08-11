@@ -62,6 +62,17 @@ class FakeAudioContext {
     };
   }
 
+  createDynamicsCompressor() {
+    return {
+      connect() {},
+      threshold: { value: -24 },
+      knee: { value: 30 },
+      ratio: { value: 12 },
+      attack: { value: 0.003 },
+      release: { value: 0.25 },
+    };
+  }
+
   createMediaStreamDestination() {
     return { stream: {} };
   }
@@ -346,6 +357,46 @@ test('track end reports Needs action for only the affected tab', async () => {
   }]);
   assert.deepEqual(contexts[1].gainCalls.at(-1), {
     value: 0.3,
+    startTime: 5,
+    timeConstant: 0.1,
+  });
+});
+
+test('applies boosted volume and clamps out-of-range values', async () => {
+  resetFakes();
+  getUserMedia = async () => new FakeStream();
+
+  await messageListener({
+    type: 'START_CAPTURE',
+    tabId: 701,
+    streamId: 'stream-701',
+    settings: { deviceId: 'sink-a', volume: 2.5, muted: false },
+  });
+
+  assert.deepEqual(contexts[0].gainCalls, [
+    { value: 2.5, startTime: 5, timeConstant: 0.1 },
+  ]);
+
+  await messageListener({
+    type: 'SET_VOLUME',
+    tabId: 701,
+    volume: 9,
+    muted: false,
+  });
+  assert.deepEqual(contexts[0].gainCalls.at(-1), {
+    value: 5,
+    startTime: 5,
+    timeConstant: 0.1,
+  });
+
+  await messageListener({
+    type: 'SET_VOLUME',
+    tabId: 701,
+    volume: 3,
+    muted: true,
+  });
+  assert.deepEqual(contexts[0].gainCalls.at(-1), {
+    value: 0,
     startTime: 5,
     timeConstant: 0.1,
   });

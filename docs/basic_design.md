@@ -25,7 +25,8 @@ graph TD
         Offscreen --> Desired[desiredSettings]
         Offscreen --> AudioCtx[AudioContext]
         AudioCtx --> Gain[GainNode]
-        Gain --> Dest[MediaStreamDestination]
+        Gain --> Comp[DynamicsCompressor]
+        Comp --> Dest[MediaStreamDestination]
         Dest --> AudioEl[HTMLAudioElement]
     end
     
@@ -48,7 +49,8 @@ graph TD
     *   Chrome 側の stale `pending` をポーリングし、固着時は `needs_action` へ落とす。
 *   **Offscreen Document (`offscreen.html` / `utils/offscreen-handler.ts`)**
     *   Background から受け取ったストリームIDを使用して `getUserMedia` を実行し、タブの音声をキャプチャする。
-    *   **Web Audio API** を使用して音量調整 (`GainNode`) を行う。
+    *   **Web Audio API** を使用して音量調整 (`GainNode`) を行う。範囲は 0.0〜5.0（0%〜500%）、デフォルトは 1.0。
+    *   ブースト時のピーク抑制のため、`GainNode` の後段に `DynamicsCompressorNode` を接続する。
     *   **オーディオ出力制御**: 生成した `HTMLAudioElement` に対して `setSinkId()` を呼び出し、物理デバイスへの出力を行う。
     *   キャプチャ再構築時も `desiredSettings` により設定を保持する。
 *   **Permission Page (`permissions.html`)**
@@ -85,7 +87,7 @@ graph TD
 ```typescript
 interface PageAudioSetting {
   deviceId: string | null; // 選択された出力デバイスID
-  volume: number;          // 音量 (0.0 - 1.0)
+  volume: number;          // 音量 (0.0 - 5.0, デフォルト 1.0)
   muted: boolean;          // ミュート状態
   timestamp: number;       // 最終更新タイムスタンプ
 }

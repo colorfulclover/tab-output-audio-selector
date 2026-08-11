@@ -7,7 +7,7 @@ Tab Audio Selector is a Chrome extension that allows you to individually control
 ## Features
 
 *   **Tab-specific Output Switching**: Output audio from specific tabs to different speakers or headphones.
-*   **Individual Volume Control**: Adjust volume or mute each tab independently.
+*   **Individual Volume Control**: Adjust volume from 0% to 500% (boost above 100%) or mute each tab independently.
 *   **Auto-save Settings**: Remembers output settings for each site and automatically applies them on next visit.
 *   **Restore Guidance After Restart**: After a browser restart, a `!` action badge prompts you to reopen the popup and restore saved routing.
 *   **Multilingual Support**: Supports English and Japanese.
@@ -32,7 +32,7 @@ Currently in development, requires loading from source code.
 2.  Click the Tab Audio Selector icon in the toolbar.
 3.  Select the desired device from the **Output Device** dropdown.
     *   *Note: Microphone permission is required only once to get device names. If the "Grant Permission" button appears, please follow the instructions to allow it.*
-4.  Adjust volume with the **Volume** slider.
+4.  Adjust volume with the **Volume** slider (up to 500%).
 
 ## Documentation
 

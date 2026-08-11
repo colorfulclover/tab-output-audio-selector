@@ -25,12 +25,16 @@ UIテキストは `chrome.i18n` により、ブラウザの言語設定（日本
 |  +--------------------------------------------+  |
 |                                                  |
 |  Volume: 80%                                     |
-|  [Icon: Vol] [============O-------] [80%]        |
+|  [Icon: Vol] [==|=========O-------] [80%]        |
+|              ^100% marker (boost zone after |)   |
+|                                                  |
+|  Volume: 250% (amber when > 100%)                |
+|  [Icon: Vol] [==|========O--------] [250%]       |
 |                                                  |
 |  [ ] Mute                                        |
 +--------------------------------------------------+
 |  [Footer]                                        |
-|  (●) Capturing | Tab Audio Selector v0.0.2       |
+|  (●) Capturing | Tab Audio Selector v1.0.0       |
 |  © 2026 colorfulclover                           |
 +--------------------------------------------------+
 ```
@@ -46,7 +50,7 @@ App.svelte (Root)
 ├── Header.svelte         # タイトルバー
 ├── CurrentTabInfo.svelte # 現在のタブ情報 (Favicon, Title)
 ├── DeviceSelector.svelte # デバイス選択ドロップダウン（権限リクエストボタンも内包）
-├── VolumeControl.svelte  # 音量スライダー + ミュートボタン
+├── VolumeControl.svelte  # 音量スライダー (0%〜500%) + ミュートボタン。100% 超は琥珀色表示と 100% マーカー
 └── Footer.svelte         # ステータスバー・バージョン情報
 ```
 
@@ -88,5 +92,8 @@ App.svelte (Root)
 *   **テーマ**:
     *   **Light**: Bg `#ffffff`, Text `#333333`, Accent `#3b82f6` (Blue-500)
     *   **Dark**: Bg `#1f2937` (Gray-800), Text `#f3f4f6`, Accent `#60a5fa` (Blue-400)
+*   **音量ブースト表示**:
+    *   0%〜100%: 通常のグレー系パーセント表示
+    *   101%〜500%: パーセント表示を琥珀色 (`#d97706` 系)。スライダー左から 20%（100% 位置）に区切り線
 *   **サイズ**: `width: 350px`, `min-height: 400px`
 *   **多言語化**: すべてのUIテキストは `src/utils/i18n.ts` を通じて `_locales` から取得する。

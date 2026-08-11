@@ -1,4 +1,5 @@
 import type { AudioSettings } from '@/utils/messaging';
+import { VOLUME_DEFAULT, clampVolume } from './volume';
 
 export interface SavedAudioSettings {
   deviceId: string | null;
@@ -9,7 +10,7 @@ export interface SavedAudioSettings {
 export function hasNonDefaultAudioSettings(settings: SavedAudioSettings | null): boolean {
   return !!settings && (
     (!!settings.deviceId && settings.deviceId !== 'default') ||
-    settings.volume !== 1 ||
+    clampVolume(settings.volume) !== VOLUME_DEFAULT ||
     settings.muted
   );
 }
@@ -31,7 +32,7 @@ export async function loadCaptureSettings(
 
   return {
     deviceId: saved.deviceId || 'default',
-    volume: saved.volume,
+    volume: clampVolume(saved.volume),
     muted: saved.muted,
   };
 }

@@ -25,8 +25,8 @@ Tab Audio Selector は、そんな悩みを解決するChrome拡張機能です�
 *   **活用例**: オンライン会議（Google Meet, Zoomなど）はヘッドセットで聞き逃しを防ぎ、YouTubeのBGMは外部スピーカーで高音質に楽しむ、といった使い分けが可能です。
 
 **2. タブごとの音量コントロール**
-Webページにボリューム調節機能がない場合でも、この拡張機能を使えば0%〜100%の範囲で音量を微調整できます。
-*   **活用例**: 突然大きな音が鳴るサイトの音量を予め下げておいたり、聴き取りにくい動画の音量だけを上げたりできます。ワンクリックでミュート（消音）も可能です。
+Webページにボリューム調節機能がない場合でも、この拡張機能を使えば0%〜500%の範囲で音量を調整できます（100%超はブースト）。
+*   **活用例**: 突然大きな音が鳴るサイトの音量を予め下げておいたり、聴き取りにくい動画の音量だけをブーストしたりできます。ワンクリックでミュート（消音）も可能です。
 
 **3. 設定の自動保存**
 サイト（ドメイン）ごとに設定したデバイスと音量を自動的に記憶します。
@@ -62,7 +62,7 @@ Route the audio of a specific tab to any connected speaker, headphone, or earpho
 *   **Use Case**: Keep your online meeting (Google Meet, Zoom, etc.) on your headset to avoid missing anything, while enjoying YouTube BGM through your high-quality external speakers.
 
 **2. Per-Tab Volume Control**
-Even if a webpage doesn't have a volume slider, you can fine-tune the volume from 0% to 100% using this extension.
+Even if a webpage doesn't have a volume slider, you can fine-tune the volume from 0% to 500% using this extension (values above 100% boost the audio).
 *   **Use Case**: Pre-lower the volume for sites that are unexpectedly loud, or boost the volume for quiet videos. You can also mute a tab with a single click.
 
 **3. Auto-Save Settings**

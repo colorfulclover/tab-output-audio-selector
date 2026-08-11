@@ -1,5 +1,6 @@
 export interface AudioSettings {
   deviceId: string;
+  /** Volume gain: 0.0 (mute) to 5.0 (500%). Default is 1.0 (100%). */
   volume: number;
   muted: boolean;
 }
