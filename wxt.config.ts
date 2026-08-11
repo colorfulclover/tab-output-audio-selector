@@ -18,7 +18,7 @@ export default defineConfig({
     const extName = nameSuffix ? `Tab Audio Selector${nameSuffix}` : '__MSG_extName__';
 
     return {
-      default_locale: 'ja',
+      default_locale: 'en',
       name: extName,
       description: '__MSG_extDescription__',
       permissions: [
