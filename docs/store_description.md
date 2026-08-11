@@ -42,6 +42,15 @@ Webページにボリューム調節機能がない場合でも、この拡張�
 3.  **Output Device** から出力したいデバイスを選択します。
 4.  **Volume** スライダーで音量を調整します。
 
+#### 📝 更新履歴
+
+**v1.0.1**
+*   再生を一時停止したあと、一定時間経過すると選択した出力デバイスがデフォルトに戻ってしまう問題を修正しました。
+*   キャプチャ切断時の復旧処理を強化し、デバイス／音量設定がより安定して再適用されるようにしました。
+
+**v1.0.0**
+*   初回公開。タブごとの出力デバイス切替、音量制御、サイトごとの設定保存に対応。
+
 ---
 
 ### English
@@ -77,4 +86,33 @@ Microphone permission, required to display device names, is only used temporaril
 2.  Click the extension icon in the toolbar.
 3.  Select your desired device from the **Output Device** dropdown.
 4.  Adjust the volume using the **Volume** slider.
+
+#### 📝 Changelog
+
+**v1.0.1**
+*   Fixed an issue where the selected output device could revert to the default after pausing playback for a while.
+*   Improved recovery when capture is interrupted, so device and volume settings are re-applied more reliably.
+
+**v1.0.0**
+*   Initial release. Per-tab output device switching, volume control, and per-site setting persistence.
+
+---
+
+## What's New / このバージョンの新機能（審査・更新提出用）
+
+Chrome ウェブストアの「このアイテムの新機能」欄に貼り付ける短い文面です。
+
+### 日本語
+```
+v1.0.1
+・再生停止後に出力デバイスがデフォルトへ戻る不具合を修正
+・キャプチャ切断時の設定再適用を改善
+```
+
+### English
+```
+v1.0.1
+- Fixed output device resetting to default after paused playback
+- Improved re-applying settings when capture is interrupted
+```
 

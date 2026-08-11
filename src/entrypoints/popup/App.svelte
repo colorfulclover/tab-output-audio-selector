@@ -16,12 +16,10 @@
   let muted: boolean = false;
   let isLoading = true;
   let permissionDenied = false;
-  let isCaptureActive = false;
   let status: 'Ready' | 'Capturing' | 'Error' = 'Ready';
 
   onMount(async () => {
     try {
-      // 1. Get Active Tab Info
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tabs.length > 0) {
         const tab = tabs[0];
@@ -32,28 +30,24 @@
           favIconUrl: tab.favIconUrl
         };
 
-        // 2. Load Saved Settings
         if (currentTab.url) {
           const saved = await getAudioSettings(currentTab.url);
           if (saved) {
             selectedDeviceId = saved.deviceId;
             volume = saved.volume;
             muted = saved.muted;
-            // If saved settings exist, we assume capture might be desired,
-            // but we only start it when user interacts or if we had a persistent state logic.
-            // For now, let's start capture if settings are different from default.
+
             if (saved.volume !== 1.0 || saved.muted || saved.deviceId !== 'default') {
-                startCapture();
+              await applySettings({ persist: false });
             }
           }
         }
       }
 
-      // 3. Get Devices
       await loadDevices();
-
     } catch (e) {
       console.error('Initialization error:', e);
+      status = 'Error';
     } finally {
       isLoading = false;
     }
@@ -63,7 +57,7 @@
     try {
       const deviceList = await navigator.mediaDevices.enumerateDevices();
       const audioOutputs = deviceList.filter(d => d.kind === 'audiooutput');
-      
+
       devices = audioOutputs.map(d => ({
         deviceId: d.deviceId,
         label: d.label || (d.deviceId === 'default' ? t('defaultDevice') : `${t('unknownDevice')} (${d.deviceId.slice(0, 4)}...)`)
@@ -71,7 +65,6 @@
 
       const hasLabels = devices.some(d => d.label && d.label !== t('defaultDevice') && !d.label.startsWith(t('unknownDevice')));
       permissionDenied = !hasLabels && devices.length > 0;
-
     } catch (e) {
       console.error('Failed to enumerate devices:', e);
     }
@@ -80,7 +73,7 @@
   async function requestPermission() {
     try {
       await chrome.tabs.create({ url: chrome.runtime.getURL('permissions.html') });
-      window.close(); // Close popup
+      window.close();
     } catch (e) {
       console.error('Failed to open permission page:', e);
     }
@@ -88,65 +81,46 @@
 
   function handleDeviceChange(event: CustomEvent<string>) {
     selectedDeviceId = event.detail;
-    applySettings();
+    void applySettings();
   }
 
   function handleVolumeChange(event: CustomEvent<number>) {
     volume = event.detail;
-    applySettings();
+    void applySettings();
   }
 
   function handleMuteChange(event: CustomEvent<boolean>) {
     muted = event.detail;
-    applySettings();
+    void applySettings();
   }
 
-  function startCapture() {
+  async function applySettings(options: { persist?: boolean } = {}) {
+    const { persist = true } = options;
     if (!currentTab?.id) return;
-    if (isCaptureActive) return;
 
     status = 'Capturing';
-    chrome.runtime.sendMessage({
-      type: 'START_CAPTURE',
-      tabId: currentTab.id
-    });
-    isCaptureActive = true;
-  }
 
-  async function applySettings() {
-    if (!currentTab?.id) return;
-
-    // Ensure capture is started before applying settings
-    // In a robust implementation, we might check status first.
-    // For now, simple state flag.
-    if (!isCaptureActive) {
-        startCapture();
-        // Give a slight delay for capture to init (optimistic UI update is fine too)
-    }
-
-    // Send Device
+    // Background ensures Offscreen + capture, then applies these settings.
     if (selectedDeviceId) {
-        chrome.runtime.sendMessage({
+      await chrome.runtime.sendMessage({
         type: 'SET_DEVICE',
         tabId: currentTab.id,
         deviceId: selectedDeviceId
-        });
+      });
     }
 
-    // Send Volume
-    chrome.runtime.sendMessage({
+    await chrome.runtime.sendMessage({
       type: 'SET_VOLUME',
-      tabId: currentTab.id, 
-      volume: volume,
-      muted: muted
+      tabId: currentTab.id,
+      volume,
+      muted
     });
 
-    // Save Settings
-    if (currentTab.url) {
+    if (persist && currentTab.url) {
       await saveAudioSettings(currentTab.url, {
         deviceId: selectedDeviceId || 'default',
-        volume: volume,
-        muted: muted
+        volume,
+        muted
       });
     }
   }
@@ -154,17 +128,17 @@
 
 <div class="w-[350px] min-h-[400px] bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-sans flex flex-col">
   <Header />
-  
+
   <main class="p-4 space-y-6 flex-grow">
     {#if isLoading}
       <div class="flex justify-center py-8">
         <span class="text-gray-500">{t('loading')}</span>
       </div>
     {:else if currentTab}
-      <CurrentTabInfo 
-        title={currentTab.title} 
-        url={currentTab.url} 
-        favIconUrl={currentTab.favIconUrl || ''} 
+      <CurrentTabInfo
+        title={currentTab.title}
+        url={currentTab.url}
+        favIconUrl={currentTab.favIconUrl || ''}
       />
 
       {#if permissionDenied}
@@ -172,7 +146,7 @@
           <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
             {t('permissionNeeded')}
           </p>
-          <button 
+          <button
             on:click={requestPermission}
             class="text-xs px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-full transition-colors"
           >
@@ -182,16 +156,16 @@
       {/if}
 
       <div class="space-y-4">
-        <DeviceSelector 
-          {devices} 
-          {selectedDeviceId} 
-          disabled={permissionDenied && devices.length <= 1} 
+        <DeviceSelector
+          {devices}
+          {selectedDeviceId}
+          disabled={permissionDenied && devices.length <= 1}
           on:change={handleDeviceChange}
         />
-        
-        <VolumeControl 
-          {volume} 
-          {muted} 
+
+        <VolumeControl
+          {volume}
+          {muted}
           on:volumeChange={handleVolumeChange}
           on:muteChange={handleMuteChange}
         />
@@ -202,12 +176,11 @@
       </div>
     {/if}
   </main>
-  
+
   <Footer {status} />
 </div>
 
 <style>
-  /* Global styles or resets if needed */
   :global(body) {
     margin: 0;
     padding: 0;

@@ -39,10 +39,13 @@ graph TD
     *   拡張機能のバックエンドとして動作。
     *   Popup からの要求を受け、`chrome.tabCapture.getMediaStreamId` でストリームIDを取得する。
     *   `Offscreen Document` のライフサイクルを管理し、ストリームIDを渡してキャプチャを開始させる。
+    *   Offscreen は `USER_MEDIA` reason で作成し、無音時の自動終了を避ける。
+    *   設定変更時にキャプチャが切れていれば再起動し、デバイス/音量を再適用する。
 *   **Offscreen Document (`offscreen.html` / `utils/offscreen-handler.ts`)**
     *   Background から受け取ったストリームIDを使用して `getUserMedia` を実行し、タブの音声をキャプチャする。
     *   **Web Audio API** を使用して音量調整 (`GainNode`) を行う。
     *   **オーディオ出力制御**: 生成した `HTMLAudioElement` に対して `setSinkId()` を呼び出し、物理デバイスへの出力を行う。
+    *   キャプチャ再開時に、保持している出力デバイスと音量設定を再適用する。
 *   **Permission Page (`permissions.html`)**
     *   ユーザーにマイク権限（デバイス列挙のため）を要求するための一時的なページ。
     *   Popup 内では権限要求が不安定なため、別タブとしてこれを開く。
@@ -51,16 +54,16 @@ graph TD
 ### 2.1 音声制御フロー
 1.  **操作**: ユーザーがPopupで音量変更やデバイス変更を行う。
 2.  **送信**: Popup -> Background へ `SET_VOLUME` や `SET_DEVICE` メッセージが飛ぶ。
-    *   初回のみ `START_CAPTURE` が送信され、Background がキャプチャを開始する。
-3.  **中継**: Background -> Offscreen Document へメッセージとストリームIDが転送される。
-4.  **処理**: Offscreen Document 内の `AudioContext` が音声を処理し、`HTMLAudioElement` が指定デバイスへ出力する。
+3.  **確保**: Background が Offscreen の存在と当該タブのキャプチャ状態を確認し、必要なら再キャプチャする。
+4.  **中継**: Background -> Offscreen Document へ設定メッセージ（初回はストリームID付き `START_CAPTURE`）が転送される。
+5.  **処理**: Offscreen Document 内の `AudioContext` が音声を処理し、`HTMLAudioElement` が指定デバイスへ出力する。
 
 ### 2.2 設定保存と復元フロー
 1.  **保存**: ユーザーが設定を変更した際、Popup が `chrome.storage.local` に「URL（またはドメイン）」をキーとして設定を保存する。
 2.  **復元**:
     *   ユーザーが再度同じURLのページを開き、Popup を開く。
     *   Popup 初期化時に保存された設定を読み込む。
-    *   設定が存在する場合、自動的にキャプチャを開始し、設定値を適用する。
+    *   設定がデフォルト以外の場合、`SET_DEVICE` / `SET_VOLUME` を送り、Background 経由でキャプチャ開始と設定適用を行う。
 
 ## 3. データモデル設計 (Data Persistence)
 ### 3.1 ストレージ設計 (`chrome.storage.local`)

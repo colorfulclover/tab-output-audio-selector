@@ -2,7 +2,7 @@
   "name": "Tab Audio Selector",
   "description": "Tab Audio Selector",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",
