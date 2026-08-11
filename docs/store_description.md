@@ -26,7 +26,7 @@ Tab Audio Selector は、そんな悩みを解決するChrome拡張機能です�
 
 **2. タブごとの音量コントロール**
 Webページにボリューム調節機能がない場合でも、この拡張機能を使えば0%〜500%の範囲で音量を調整できます（100%超はブースト）。
-*   **活用例**: 突然大きな音が鳴るサイトの音量を予め下げておいたり、聴き取りにくい動画の音量だけをブーストしたりできます。ワンクリックでミュート（消音）も可能です。
+*   **活用例**: 突然大きな音が鳴るサイトの音量を予め下げておいたり、聴き取りにくい動画の音量だけをブーストしたりできます。ワンクリックでミュート（消音）も可能で、**100%** ボタンですぐ既定音量に戻せます。
 
 **3. 設定の自動保存**
 サイト（ドメイン）ごとに設定したデバイスと音量を自動的に記憶します。
@@ -41,7 +41,21 @@ Webページにボリューム調節機能がない場合でも、この拡張�
 1.  音声出力先を変更したいタブを開きます。
 2.  ツールバーのアイコンをクリックします。
 3.  **Output Device** から出力したいデバイスを選択します。
-4.  **Volume** スライダーで音量を調整します。
+4.  **Volume** スライダーで音量を調整します（最大 500%）。必要なら **100%** ボタンで既定音量に戻せます。
+
+#### 📝 更新履歴
+**v1.0.0**
+*   正式版リリース
+*   音量ブーストに対応（最大 500%。100%超はブースト領域として表示）
+*   高音量時のピーク歪みを緩和するリミッターを追加
+*   音量をワンクリックで 100% に戻すリセットボタンを追加
+
+**v0.0.1**
+*   初回リリース
+*   タブごとの音声出力先の切り替え
+*   タブごとの音量調整およびミュート
+*   ドメイン単位の設定保存・復元
+*   日本語・英語対応
 
 ---
 
@@ -63,7 +77,7 @@ Route the audio of a specific tab to any connected speaker, headphone, or earpho
 
 **2. Per-Tab Volume Control**
 Even if a webpage doesn't have a volume slider, you can fine-tune the volume from 0% to 500% using this extension (values above 100% boost the audio).
-*   **Use Case**: Pre-lower the volume for sites that are unexpectedly loud, or boost the volume for quiet videos. You can also mute a tab with a single click.
+*   **Use Case**: Pre-lower the volume for sites that are unexpectedly loud, or boost the volume for quiet videos. You can also mute a tab with a single click, or reset to 100% instantly.
 
 **3. Auto-Save Settings**
 The extension automatically remembers the device and volume settings for each site (domain).
@@ -78,5 +92,41 @@ Microphone permission, required to display device names, is only used temporaril
 1.  Open the tab where you want to change the audio output.
 2.  Click the extension icon in the toolbar.
 3.  Select your desired device from the **Output Device** dropdown.
-4.  Adjust the volume using the **Volume** slider.
+4.  Adjust the volume using the **Volume** slider (up to 500%). Use the **100%** button to reset to the default level when needed.
+
+#### 📝 Changelog
+**v1.0.0**
+*   First stable release
+*   Volume boost up to 500% (values above 100% are shown as boost)
+*   Added a limiter to reduce peak distortion at high boost levels
+*   Added a one-click **100%** reset button
+
+**v0.0.1**
+*   Initial release
+*   Per-tab audio output device selection
+*   Per-tab volume control and mute
+*   Save and restore settings per domain
+*   Japanese and English support
+
+---
+
+## What's new in this version / このバージョンの新機能（ダッシュボード用）
+
+Chrome Web Store の「このバージョンの変更内容」欄に貼り付ける用の短文です。
+
+### 日本語
+```
+v1.0.0 正式版リリース
+・音量ブースト（最大500%）に対応
+・高音量時の歪みを抑えるリミッターを追加
+・音量を100%に戻すリセットボタンを追加
+```
+
+### English
+```
+v1.0.0 stable release
+• Volume boost up to 500%
+• Limiter to reduce distortion at high boost
+• One-click reset to 100% volume
+```
 
