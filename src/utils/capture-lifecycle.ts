@@ -27,14 +27,24 @@ interface CaptureLifecycleDependencies {
   ): Promise<CaptureResult>;
   markNeedsAction(tabId: number): Promise<void>;
   clearIndicator(tabId: number): Promise<void>;
+  /** Injectable for tests; defaults to setTimeout-based delay. */
+  delay?(ms: number): Promise<void>;
 }
+
+const DEFAULT_PENDING_POLL_ATTEMPTS = 5;
+const DEFAULT_PENDING_POLL_INTERVAL_MS = 200;
 
 function isCaptured(status: string): boolean {
   return status === 'active' || status === 'pending';
 }
 
+function defaultDelay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function createCaptureLifecycle(dependencies: CaptureLifecycleDependencies) {
   const pendingCaptures = new Map<number, Promise<CaptureResult>>();
+  const delay = dependencies.delay ?? defaultDelay;
 
   async function updateTabIndicator(tab: CaptureTab, capturedTabIds: Set<number>) {
     if (tab.id === undefined) return;
@@ -75,18 +85,35 @@ export function createCaptureLifecycle(dependencies: CaptureLifecycleDependencie
     await updateTabIndicator(tab, capturedTabIds);
   }
 
-  async function startCaptureInternal(tabId: number): Promise<CaptureResult> {
+  async function findCapturedTab(tabId: number): Promise<CapturedTab | undefined> {
     const capturedTabs = await dependencies.getCapturedTabs();
-    const capturedTab = capturedTabs.find((tab) => tab.tabId === tabId && isCaptured(tab.status));
+    return capturedTabs.find((tab) => tab.tabId === tabId);
+  }
 
-    if (capturedTab?.status === 'active') {
-      await dependencies.clearIndicator(tabId);
-      return { status: 'active' };
-    }
-    if (capturedTab?.status === 'pending') {
-      return { status: 'pending' };
-    }
+  /**
+   * Chrome may report `pending` while a capture is still starting, or after a
+   * failed hand-off that left a stale pending entry. Poll briefly, then either
+   * reuse an active capture, retry start, or surface needs_action.
+   */
+  async function resolveChromePending(
+    tabId: number,
+  ): Promise<'active' | 'retry' | 'stale'> {
+    for (let attempt = 0; attempt < DEFAULT_PENDING_POLL_ATTEMPTS; attempt++) {
+      await delay(DEFAULT_PENDING_POLL_INTERVAL_MS);
+      const tab = await findCapturedTab(tabId);
 
+      if (tab?.status === 'active') {
+        return 'active';
+      }
+      if (!tab || tab.status === 'stopped' || tab.status === 'error') {
+        return 'retry';
+      }
+      // still pending — keep polling
+    }
+    return 'stale';
+  }
+
+  async function beginOffscreenCapture(tabId: number): Promise<CaptureResult> {
     try {
       const [streamId, settings] = await Promise.all([
         dependencies.getMediaStreamId(tabId),
@@ -105,6 +132,30 @@ export function createCaptureLifecycle(dependencies: CaptureLifecycleDependencie
       await dependencies.markNeedsAction(tabId);
       return { status: 'error', error: message };
     }
+  }
+
+  async function startCaptureInternal(tabId: number): Promise<CaptureResult> {
+    const capturedTab = await findCapturedTab(tabId);
+
+    if (capturedTab?.status === 'active') {
+      await dependencies.clearIndicator(tabId);
+      return { status: 'active' };
+    }
+
+    if (capturedTab?.status === 'pending') {
+      const resolution = await resolveChromePending(tabId);
+      if (resolution === 'active') {
+        await dependencies.clearIndicator(tabId);
+        return { status: 'active' };
+      }
+      if (resolution === 'stale') {
+        await dependencies.markNeedsAction(tabId);
+        return { status: 'needs_action' };
+      }
+      // pending cleared — fall through and start fresh
+    }
+
+    return beginOffscreenCapture(tabId);
   }
 
   function startCapture(tabId: number): Promise<CaptureResult> {

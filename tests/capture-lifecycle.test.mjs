@@ -19,11 +19,16 @@ function createHarness(overrides = {}) {
     marked: [],
     media: [],
     offscreen: [],
+    delays: 0,
   };
+  let capturedTabs = [...(overrides.capturedTabs ?? [])];
   const settingsByUrl = overrides.settingsByUrl ?? new Map();
   const dependencies = {
     queryTabs: async () => overrides.tabs ?? [],
-    getCapturedTabs: async () => overrides.capturedTabs ?? [],
+    getCapturedTabs: async () => {
+      if (overrides.getCapturedTabs) return overrides.getCapturedTabs();
+      return capturedTabs;
+    },
     getAudioSettings: async (url) => settingsByUrl.get(url) ?? null,
     loadCaptureSettings: async (tabId) => {
       if (overrides.loadCaptureSettings) return overrides.loadCaptureSettings(tabId);
@@ -47,10 +52,17 @@ function createHarness(overrides = {}) {
     clearIndicator: async (tabId) => {
       calls.cleared.push(tabId);
     },
+    delay: async () => {
+      calls.delays += 1;
+      if (overrides.onDelay) await overrides.onDelay(calls.delays);
+    },
   };
 
   return {
     calls,
+    setCapturedTabs: (tabs) => {
+      capturedTabs = tabs;
+    },
     lifecycle: createCaptureLifecycle(dependencies),
   };
 }
@@ -174,14 +186,49 @@ test('service worker restart reuses an active capture without requesting a strea
   assert.deepEqual(calls.cleared, [71]);
 });
 
-test('pending captures are not duplicated', async () => {
+test('stale pending capture becomes needs_action without starting a stream', async () => {
   const { calls, lifecycle } = createHarness({
     capturedTabs: [{ tabId: 72, status: 'pending' }],
   });
 
-  assert.deepEqual(await lifecycle.startCapture(72), { status: 'pending' });
+  assert.deepEqual(await lifecycle.startCapture(72), { status: 'needs_action' });
+  assert.equal(calls.delays, 5);
+  assert.deepEqual(calls.marked, [72]);
   assert.deepEqual(calls.media, []);
   assert.deepEqual(calls.offscreen, []);
+});
+
+test('pending capture that becomes active is reused', async () => {
+  const { calls, setCapturedTabs, lifecycle } = createHarness({
+    capturedTabs: [{ tabId: 73, status: 'pending' }],
+    onDelay: async (attempt) => {
+      if (attempt === 2) {
+        setCapturedTabs([{ tabId: 73, status: 'active' }]);
+      }
+    },
+  });
+
+  assert.deepEqual(await lifecycle.startCapture(73), { status: 'active' });
+  assert.equal(calls.delays, 2);
+  assert.deepEqual(calls.cleared, [73]);
+  assert.deepEqual(calls.media, []);
+  assert.deepEqual(calls.offscreen, []);
+});
+
+test('pending capture that clears retries a fresh start', async () => {
+  const { calls, setCapturedTabs, lifecycle } = createHarness({
+    capturedTabs: [{ tabId: 74, status: 'pending' }],
+    onDelay: async (attempt) => {
+      if (attempt === 1) {
+        setCapturedTabs([]);
+      }
+    },
+  });
+
+  assert.deepEqual(await lifecycle.startCapture(74), { status: 'active' });
+  assert.equal(calls.delays, 1);
+  assert.deepEqual(calls.media, [74]);
+  assert.equal(calls.offscreen.length, 1);
 });
 
 test('ended or failed capture status restores the Needs action marker', async () => {
