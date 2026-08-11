@@ -44,6 +44,9 @@ Webページにボリューム調節機能がない場合でも、この拡張�
 4.  **Volume** スライダーで音量を調整します（最大 500%）。必要なら **100%** ボタンで既定音量に戻せます。
 
 #### 📝 更新履歴
+**v1.0.1**
+*   デフォルト言語を英語に変更
+
 **v1.0.0**
 *   正式版リリース
 *   音量ブーストに対応（最大 500%。100%超はブースト領域として表示）
@@ -95,6 +98,9 @@ Microphone permission, required to display device names, is only used temporaril
 4.  Adjust the volume using the **Volume** slider (up to 500%). Use the **100%** button to reset to the default level when needed.
 
 #### 📝 Changelog
+**v1.0.1**
+*   Change the default language to English
+
 **v1.0.0**
 *   First stable release
 *   Volume boost up to 500% (values above 100% are shown as boost)
