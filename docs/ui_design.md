@@ -30,10 +30,15 @@ UIテキストは `chrome.i18n` により、ブラウザの言語設定（日本
 |  [ ] Mute                                        |
 +--------------------------------------------------+
 |  [Footer]                                        |
-|  (●) Ready | Tab Audio Selector v1.0.0           |
+|  (●) Capturing | Tab Audio Selector v0.0.2       |
 |  © 2026 colorfulclover                           |
 +--------------------------------------------------+
 ```
+
+### 1.2 ツールバーインジケータ
+*   **要操作バッジ**: 非デフォルト設定が保存されているがキャプチャ未開始のタブに、アクションバッジ `!`（背景色 `#d97706`）を表示する。
+*   **ツールチップ**: `actionNeedsTitle`（例: 「操作が必要です。保存済みの音声出力を復元するにはクリックしてください。」）。
+*   **クリア条件**: キャプチャが `active` になったらバッジとツールチップを解除する。
 
 ## 2. コンポーネント階層 (Component Hierarchy)
 ```
@@ -46,31 +51,35 @@ App.svelte (Root)
 ```
 
 ## 3. 状態管理 (State Management)
-### 3.1 リアクティブ状態 (Svelte Stores)
-*   **`$tabInfo`**: `{ id: number, title: string, url: string, favIconUrl: string }`
-*   **`$audioSettings`**: `{ deviceId: string, volume: number, muted: boolean }`
-*   **`$devices`**: `MediaDeviceInfo[]` (label, deviceId)
-*   **`$permissionStatus`**: `'granted' | 'prompt' | 'denied'`
-*   **`$status`**: `'Ready' | 'Capturing' | 'Error'` 等のアプリ状態
+### 3.1 リアクティブ状態
+*   **`currentTab`**: `{ id: number, title: string, url: string, favIconUrl?: string }`
+*   **`selectedDeviceId` / `volume` / `muted`**: 現在のオーディオ設定
+*   **`devices`**: `DeviceInfo[]` (label, deviceId)
+*   **`permissionDenied`**: デバイスラベル未取得時 `true`
+*   **`status`**: `'Ready' | 'Restoring' | 'Capturing' | 'NeedsAction' | 'Error'`
 
 ### 3.2 UI状態遷移
 *   **Initializing**: Popup起動時。スピナーを表示 (`Loading...` / `読み込み中...`)。
-*   **NoMediaFound**: タブ内でメディア要素が見つからない場合。
-*   **PermissionRequired**: デバイスラベルが空の場合。`PermissionAlert` を表示し、デバイス選択を一時的にロック（またはIDのみ表示）。
+*   **PermissionRequired**: デバイスラベルが空の場合。権限アラートを表示し、デバイス選択を一時的に制限。
+*   **Restoring**: 保存設定の復元 / キャプチャ開始中。Footer は琥珀色のパルス表示。
+*   **Capturing**: キャプチャ成功。Footer は緑色のパルス表示。
+*   **NeedsAction**: キャプチャ停止・要再操作。Footer は琥珀色の点灯。
+*   **Error**: 失敗時。Footer は赤色の点灯。
 
 ## 4. インタラクションフロー
 1.  **Popup Open**:
-    *   `background` から現在のタブ情報を取得。
+    *   現在のタブ情報を取得。
     *   `storage` から現在のオーディオ設定を取得。
-    *   設定が存在する場合、自動的に `START_CAPTURE` を送信してキャプチャを開始。
+    *   非デフォルト設定が存在する場合、自動的に `START_CAPTURE` を送信してキャプチャを開始。
 2.  **Permission Request**:
     *   「権限を許可」ボタン押下 -> 新しいタブ (`permissions.html`) を開く。
     *   ユーザーがマイク権限を許可 -> タブが自動的に閉じる -> Popupを再度開くとデバイス名が表示される。
-3.  **Device Change**:
-    *   ドロップダウン変更 -> 即座に `$audioSettings` を更新 -> `SET_DEVICE` メッセージ送信。
-4.  **Volume Change**:
-    *   スライダー操作 -> `input` イベントで即座にメッセージ送信（Throttling 100ms）。
-    *   `change` イベント（操作終了）でストレージへの保存トリガー。
+3.  **Device / Volume Change**:
+    *   変更時にキャプチャ開始（未開始なら）→ `SET_DEVICE` / `SET_VOLUME` を順に送信。
+    *   各応答の `CaptureResult` で Footer ステータスを更新。
+    *   同時にストレージへ保存する。
+4.  **Runtime Status**:
+    *   `CAPTURE_STATUS` を購読し、キャプチャ終了時は `NeedsAction` / `Error` へ遷移する。
 
 ## 5. スタイルガイドライン
 *   **フレームワーク**: Tailwind CSS (WXT標準サポート) を使用し、メンテナンス性を高める。

@@ -9,6 +9,7 @@ Tab Audio Selector is a Chrome extension that allows you to individually control
 *   **Tab-specific Output Switching**: Output audio from specific tabs to different speakers or headphones.
 *   **Individual Volume Control**: Adjust volume or mute each tab independently.
 *   **Auto-save Settings**: Remembers output settings for each site and automatically applies them on next visit.
+*   **Restore Guidance After Restart**: After a browser restart, a `!` action badge prompts you to reopen the popup and restore saved routing.
 *   **Multilingual Support**: Supports English and Japanese.
 
 ## Installation
@@ -59,6 +60,7 @@ This project is developed based on the following design documents.
 ### Commands
 *   `pnpm dev`: Start dev server (HMR enabled)
 *   `pnpm build`: Production build
+*   `pnpm test`: Run unit tests
 
 ## License
 
