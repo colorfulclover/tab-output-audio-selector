@@ -31,6 +31,7 @@ Webページにボリューム調節機能がない場合でも、この拡張�
 **3. 設定の自動保存**
 サイト（ドメイン）ごとに設定したデバイスと音量を自動的に記憶します。
 *   **活用例**: 「YouTubeはいつもスピーカー、音量50%」のように、次回そのサイトを開いた時にいつもの設定が自動で適用されます。毎回設定し直す手間はありません。
+*   **補足**: ブラウザ再起動後は、拡張機能アイコンの `!` バッジが復元操作を案内します。Popup を開けば保存済み設定を再適用できます。
 
 **4. 安心のプライバシー設計**
 オーディオ処理はすべてお使いのブラウザ内（オフスクリーン）で完結します。音声データが外部のサーバーに送信されることは一切ありません。
@@ -67,6 +68,7 @@ Even if a webpage doesn't have a volume slider, you can fine-tune the volume fro
 **3. Auto-Save Settings**
 The extension automatically remembers the device and volume settings for each site (domain).
 *   **Use Case**: Settings like "YouTube on Speakers at 50% volume" will be automatically applied the next time you visit the site. No need to readjust every time.
+*   **Note**: After a browser restart, a `!` badge on the extension icon prompts you to open the popup and restore saved routing.
 
 **4. Privacy-First Design**
 All audio processing is done locally within your browser (using Offscreen Documents). No audio data is ever sent to external servers.
