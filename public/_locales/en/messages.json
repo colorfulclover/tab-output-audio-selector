@@ -25,6 +25,9 @@
   "volume": {
     "message": "Volume"
   },
+  "resetVolume": {
+    "message": "Reset volume to 100%"
+  },
   "defaultDevice": {
     "message": "Default"
   },

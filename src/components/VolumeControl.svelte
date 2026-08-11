@@ -10,9 +10,11 @@
   const dispatch = createEventDispatcher<{ 
     volumeChange: number;
     muteChange: boolean;
+    reset: void;
   }>();
 
   $: isBoosted = volume > VOLUME_DEFAULT;
+  $: isAtDefault = !muted && volume === VOLUME_DEFAULT;
   $: markerPercent = (VOLUME_DEFAULT / VOLUME_MAX) * 100;
 
   function handleSliderChange(event: Event) {
@@ -23,6 +25,11 @@
 
   function toggleMute() {
     dispatch('muteChange', !muted);
+  }
+
+  function resetToDefault() {
+    if (isAtDefault || disabled) return;
+    dispatch('reset');
   }
 </script>
 
@@ -75,6 +82,19 @@
         {disabled}
       />
     </div>
+
+    <button
+      type="button"
+      class="shrink-0 px-2 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600
+        text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+        disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+      on:click={resetToDefault}
+      disabled={disabled || isAtDefault}
+      aria-label={t('resetVolume')}
+      title={t('resetVolume')}
+    >
+      100%
+    </button>
   </div>
 </div>
 

@@ -110,6 +110,12 @@
     void applySettings();
   }
 
+  function handleVolumeReset() {
+    volume = VOLUME_DEFAULT;
+    muted = false;
+    void applySettings();
+  }
+
   function applyCaptureResult(result: CaptureResult | undefined): boolean {
     if (result?.status === 'active') {
       status = 'Capturing';
@@ -228,6 +234,7 @@
           {muted} 
           on:volumeChange={handleVolumeChange}
           on:muteChange={handleMuteChange}
+          on:reset={handleVolumeReset}
         />
       </div>
     {:else}

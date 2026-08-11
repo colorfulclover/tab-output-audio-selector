@@ -23,6 +23,9 @@
   "volume": {
     "message": "音量"
   },
+  "resetVolume": {
+    "message": "音量を100%に戻す"
+  },
   "defaultDevice": {
     "message": "既定のデバイス"
   },
