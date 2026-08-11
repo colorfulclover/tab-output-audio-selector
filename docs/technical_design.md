@@ -24,6 +24,7 @@ root/
   │   ├── storage.ts         # Storage Wrapper
   │   ├── capture-lifecycle.ts # Capture restore / indicator lifecycle
   │   ├── capture-settings.ts  # Saved settings loader / non-default detection
+  │   ├── offscreen-messaging.ts # Offscreen send + missing-receiver retry
   │   ├── offscreen-handler.ts # Offscreen Logic
   │   ├── permissions.ts     # Permission Page Logic
   │   └── i18n.ts            # Internationalization Helper
@@ -39,8 +40,11 @@ root/
 ## 2. モジュール詳細設計
 ### 2.1 Background Service Worker (`entrypoints/background.ts`)
 *   **役割**:
-    *   **Offscreen 管理**: `chrome.offscreen.createDocument` を使用してオーディオ処理用の環境を作成・維持する（`Reason.USER_MEDIA`）。
+    *   **Offscreen 管理**: `chrome.offscreen.createDocument` を使用してオーディオ処理用の環境を作成・維持する。
+        *   `reasons: [USER_MEDIA]`（`getUserMedia` によるタブ音声キャプチャのため）。
+        *   `AUDIO_PLAYBACK` は使用しない（無音約30秒で文書が自動終了するため）。
     *   **キャプチャ開始**: Popup からの `START_CAPTURE`（`streamId` なし）を受け、`chrome.tabCapture.getMediaStreamId` と保存設定の読み込みを行い、Offscreen Document へ転送する。
+    *   **Offscreen 消失リトライ**: `Receiving end does not exist` の場合、Offscreen を再作成して `START_CAPTURE` を 1 回だけ再送する（`sendWithOffscreenRetry`）。
     *   **ライフサイクル管理**: `createCaptureLifecycle` により、ブラウザ再起動後の復元インジケータ、タブ更新時のバッジ更新、キャプチャ状態変化の反映を行う。
     *   **メッセージ中継**: Popup / Offscreen 間の状態通知（`CAPTURE_STATUS`）を処理する。
 
@@ -49,16 +53,24 @@ root/
 *   **主な責務**:
     *   `handleStartup` / `handleTabUpdated`: 非デフォルト設定が保存されているタブに `!` バッジを付与する（自動キャプチャは行わない）。
     *   `startCapture`: 同一タブへの同時リクエストを合流し、保存済み設定を載せて Offscreen キャプチャを開始する。
+    *   **stale `pending` 対策**: `chrome.tabCapture.getCapturedTabs()` が `pending` のとき、短時間ポーリング（200ms × 最大 5 回）する。
+        *   `active` へ遷移 → 再利用して `active` を返す。
+        *   `stopped` / `error` / 消失 → 通常の開始処理を再実行する。
+        *   タイムアウト後も `pending` → `needs_action` を返し、UI が「復元中」のまま固まらないようにする。
     *   `handleCaptureStatus`: キャプチャ停止・エラー時に `needs_action` インジケータを再表示する。
 
-### 2.3 Capture Settings (`utils/capture-settings.ts`)
+### 2.3 Offscreen Messaging (`utils/offscreen-messaging.ts`)
+*   **役割**: Offscreen 向け `sendMessage` の共通リトライ。
+*   **挙動**: 送信失敗が `Receiving end does not exist` の場合のみ、再作成コールバック実行後に 1 回再送する。
+
+### 2.4 Capture Settings (`utils/capture-settings.ts`)
 *   **役割**: URL（オリジン）単位の保存設定をキャプチャ開始時の `AudioSettings` に変換する。
 *   **非デフォルト判定** (`hasNonDefaultAudioSettings`):
     *   `deviceId` が存在し `default` 以外、または
     *   `volume !== 1`、または
     *   `muted === true`
 
-### 2.4 Offscreen Document (`utils/offscreen-handler.ts`)
+### 2.5 Offscreen Document (`utils/offscreen-handler.ts`)
 *   **役割**: 実際の音声処理と出力制御を行う。
 *   **設定保持**: タブごとの `desiredSettings` を保持し、キャプチャ再構築時も直前のデバイス / 音量設定を失わない。
 *   **処理フロー**:
@@ -71,7 +83,7 @@ root/
     7.  トラック終了時はセッションを破棄し、`CAPTURE_STATUS: needs_action` を通知する。
 *   **応答**: `START_CAPTURE` / `SET_VOLUME` / `SET_DEVICE` はいずれも `CaptureResult` を返す。
 
-### 2.5 メッセージングプロトコル (`utils/messaging.ts`)
+### 2.6 メッセージングプロトコル (`utils/messaging.ts`)
 ```typescript
 export type CaptureStatus = 'active' | 'pending' | 'needs_action' | 'error';
 

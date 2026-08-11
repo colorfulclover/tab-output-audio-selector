@@ -23,6 +23,8 @@
 | M-08 | 再起動後バッジ | 非デフォルト設定を保存した状態で Chrome を再起動 | 該当タブの拡張機能アイコンに `!` バッジが表示されること |
 | M-09 | 再起動後復元 | M-08 の状態でアイコンをクリック | Popup が自動でキャプチャを開始し、保存済みのデバイス / 音量が再適用されること |
 | M-10 | キャプチャ再構築 | キャプチャ中に再開始が必要な操作を行う | デバイス / 音量設定が維持されること |
+| M-11 | 失敗時非保存 | キャプチャ失敗状態でスライダー等を操作 | Footer が NeedsAction / Error になり、storage の値が変わらないこと |
+| M-12 | Offscreen 再読込後 | 拡張機能を再読み込みしたあと Popup で設定操作 | リトライで復旧するか、NeedsAction になり Restoring のまま固まらないこと |
 
 ### 2.2 UI/UXテスト
 | ID | 画面 | 手順 | 確認項目 |
@@ -38,3 +40,5 @@
 | U-01 | `capture-settings` | URL に紐づく保存設定の読み込みと、URL 不在時の undefined 返却 |
 | U-02 | `capture-lifecycle` | コールドスタート時のバッジ付与、アクティブキャプチャの除外、同時リクエストの合流 |
 | U-03 | `offscreen-handler` | 復元設定の適用、キャプチャ再構築時の設定保持、応答ステータスの返却 |
+| U-04 | `capture-lifecycle` | stale `pending` → `needs_action`、`pending`→`active` 再利用、`pending` 消失後の再開始 |
+| U-05 | `offscreen-messaging` | `Receiving end does not exist` 時の 1 回リトライ、無関係エラーでは再作成しないこと |

@@ -44,10 +44,13 @@ Tab Audio Selector は、Google Chrome ブラウザのタブごとにオーデ�
 *   **技術設計**: [Technical Design](./docs/technical_design.md)
 *   **UI設計**: [UI Design](./docs/ui_design.md)
 *   **テスト仕様**: [Test Specification](./docs/test_specification.md)
+*   **開発・デバッグ・公開ガイド**: [Development Guide](./docs/development_guide.md)
 *   **ストア掲載情報**: [Store Description](./docs/store_description.md)
 *   **プライバシーポリシー**: [Privacy Practices](./docs/privacy_practices.md)
 
 ## 開発者向け情報 (Development)
+
+詳細な手順（Chrome への読み込み、DevTools の使い方、ウェブストア提出）は [開発・デバッグ・公開ガイド](./docs/development_guide.md) を参照してください。
 
 ### 技術スタック
 *   [WXT](https://wxt.dev/) - Web Extension Framework
@@ -57,8 +60,10 @@ Tab Audio Selector は、Google Chrome ブラウザのタブごとにオーデ�
 
 ### コマンド
 *   `pnpm dev`: 開発サーバーを起動（HMR有効）
-*   `pnpm build`: 本番用ビルド
+*   `pnpm build`: 手動検証用ビルド（名前に `(manual)`）
 *   `pnpm test`: ユニットテストを実行
+*   `pnpm zip`: ストア提出用 ZIP 生成
+*   `pnpm check`: 型・Svelte チェック
 
 ## ライセンス (License)
 

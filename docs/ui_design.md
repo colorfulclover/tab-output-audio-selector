@@ -77,9 +77,11 @@ App.svelte (Root)
 3.  **Device / Volume Change**:
     *   変更時にキャプチャ開始（未開始なら）→ `SET_DEVICE` / `SET_VOLUME` を順に送信。
     *   各応答の `CaptureResult` で Footer ステータスを更新。
-    *   同時にストレージへ保存する。
+    *   キャプチャと SET_* がすべて成功したときだけストレージへ保存する。
+    *   失敗 / NeedsAction 時は storage を更新せず、ユーザー再操作を待つ。
 4.  **Runtime Status**:
     *   `CAPTURE_STATUS` を購読し、キャプチャ終了時は `NeedsAction` / `Error` へ遷移する。
+    *   stale `pending` は Background 側で `needs_action` に落とすため、Footer が Restoring のまま固まらない。
 
 ## 5. スタイルガイドライン
 *   **フレームワーク**: Tailwind CSS (WXT標準サポート) を使用し、メンテナンス性を高める。

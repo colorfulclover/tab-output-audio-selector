@@ -46,10 +46,13 @@ This project is developed based on the following design documents.
 *   **Technical Design**: [Technical Design](./docs/technical_design.md)
 *   **UI Design**: [UI Design](./docs/ui_design.md)
 *   **Test Specification**: [Test Specification](./docs/test_specification.md)
+*   **Development Guide** (Japanese): [Development Guide](./docs/development_guide.md)
 *   **Store Description**: [Store Description](./docs/store_description.md)
 *   **Privacy Policy**: [Privacy Practices](./docs/privacy_practices.md)
 
 ## Development
+
+For local setup, debugging (Popup / Service Worker / Offscreen), and Chrome Web Store publishing, see the [Development Guide](./docs/development_guide.md) (Japanese).
 
 ### Tech Stack
 *   [WXT](https://wxt.dev/) - Web Extension Framework
@@ -59,8 +62,10 @@ This project is developed based on the following design documents.
 
 ### Commands
 *   `pnpm dev`: Start dev server (HMR enabled)
-*   `pnpm build`: Production build
+*   `pnpm build`: Manual verification build (adds `(manual)` to the name)
 *   `pnpm test`: Run unit tests
+*   `pnpm zip`: Create a ZIP for Chrome Web Store submission
+*   `pnpm check`: Type / Svelte checks
 
 ## License
 
