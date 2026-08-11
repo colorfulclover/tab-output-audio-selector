@@ -44,9 +44,12 @@
     "message": "Permission denied. Please try again."
   },
   "statusReady": { "message": "Ready" },
+  "statusRestoring": { "message": "Restoring" },
   "statusCapturing": { "message": "Capturing" },
+  "statusNeedsAction": { "message": "Needs action" },
   "statusError": { "message": "Error" },
   "statusDeviceError": { "message": "Device Error" },
-  "statusPermissionError": { "message": "Permission Error" }
+  "statusPermissionError": { "message": "Permission Error" },
+  "actionNeedsTitle": { "message": "Needs action: click to restore saved audio output." }
 }
 

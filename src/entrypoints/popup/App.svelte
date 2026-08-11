@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import Header from '@/components/Header.svelte';
   import Footer from '@/components/Footer.svelte';
   import CurrentTabInfo from '@/components/CurrentTabInfo.svelte';
   import DeviceSelector from '@/components/DeviceSelector.svelte';
   import VolumeControl from '@/components/VolumeControl.svelte';
-  import type { DeviceInfo, TabInfo } from '@/utils/messaging';
+  import type { CaptureResult, DeviceInfo, ExtensionMessage, TabInfo } from '@/utils/messaging';
+  import { hasNonDefaultAudioSettings } from '@/utils/capture-settings';
   import { getAudioSettings, saveAudioSettings } from '@/utils/storage';
   import { t } from '@/utils/i18n';
 
@@ -16,8 +17,17 @@
   let muted: boolean = false;
   let isLoading = true;
   let permissionDenied = false;
-  let isCaptureActive = false;
-  let status: 'Ready' | 'Capturing' | 'Error' = 'Ready';
+  let capturePromise: Promise<boolean> | null = null;
+  let status: 'Ready' | 'Restoring' | 'Capturing' | 'NeedsAction' | 'Error' = 'Ready';
+
+  function handleRuntimeMessage(message: ExtensionMessage) {
+    if (message.type !== 'CAPTURE_STATUS' || message.tabId !== currentTab?.id) return;
+
+    applyCaptureResult({ status: message.status, error: message.error });
+  }
+
+  chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+  onDestroy(() => chrome.runtime.onMessage.removeListener(handleRuntimeMessage));
 
   onMount(async () => {
     try {
@@ -39,11 +49,8 @@
             selectedDeviceId = saved.deviceId;
             volume = saved.volume;
             muted = saved.muted;
-            // If saved settings exist, we assume capture might be desired,
-            // but we only start it when user interacts or if we had a persistent state logic.
-            // For now, let's start capture if settings are different from default.
-            if (saved.volume !== 1.0 || saved.muted || saved.deviceId !== 'default') {
-                startCapture();
+            if (hasNonDefaultAudioSettings(saved)) {
+              await startCapture();
             }
           }
         }
@@ -54,6 +61,7 @@
 
     } catch (e) {
       console.error('Initialization error:', e);
+      status = 'Error';
     } finally {
       isLoading = false;
     }
@@ -88,58 +96,83 @@
 
   function handleDeviceChange(event: CustomEvent<string>) {
     selectedDeviceId = event.detail;
-    applySettings();
+    void applySettings();
   }
 
   function handleVolumeChange(event: CustomEvent<number>) {
     volume = event.detail;
-    applySettings();
+    void applySettings();
   }
 
   function handleMuteChange(event: CustomEvent<boolean>) {
     muted = event.detail;
-    applySettings();
+    void applySettings();
   }
 
-  function startCapture() {
-    if (!currentTab?.id) return;
-    if (isCaptureActive) return;
+  function applyCaptureResult(result: CaptureResult | undefined): boolean {
+    if (result?.status === 'active') {
+      status = 'Capturing';
+      return true;
+    }
 
-    status = 'Capturing';
-    chrome.runtime.sendMessage({
-      type: 'START_CAPTURE',
-      tabId: currentTab.id
-    });
-    isCaptureActive = true;
+    status = result?.status === 'needs_action' ? 'NeedsAction' :
+      result?.status === 'pending' ? 'Restoring' : 'Error';
+    return false;
+  }
+
+  async function startCapture(): Promise<boolean> {
+    if (!currentTab?.id) return false;
+    if (capturePromise) return capturePromise;
+
+    status = 'Restoring';
+    const tabId = currentTab.id;
+    capturePromise = (async () => {
+      try {
+        const result = await chrome.runtime.sendMessage({
+          type: 'START_CAPTURE',
+          tabId,
+        } satisfies ExtensionMessage) as CaptureResult | undefined;
+        return applyCaptureResult(result);
+      } catch (error) {
+        console.error('Failed to start capture:', error);
+        return applyCaptureResult({ status: 'error', error: String(error) });
+      }
+    })();
+
+    try {
+      return await capturePromise;
+    } finally {
+      capturePromise = null;
+    }
   }
 
   async function applySettings() {
     if (!currentTab?.id) return;
 
-    // Ensure capture is started before applying settings
-    // In a robust implementation, we might check status first.
-    // For now, simple state flag.
-    if (!isCaptureActive) {
-        startCapture();
-        // Give a slight delay for capture to init (optimistic UI update is fine too)
-    }
+    const captureReady = await startCapture();
 
-    // Send Device
-    if (selectedDeviceId) {
-        chrome.runtime.sendMessage({
-        type: 'SET_DEVICE',
-        tabId: currentTab.id,
-        deviceId: selectedDeviceId
-        });
-    }
+    if (captureReady) {
+      try {
+        const deviceResult = await chrome.runtime.sendMessage({
+          type: 'SET_DEVICE',
+          tabId: currentTab.id,
+          deviceId: selectedDeviceId || 'default',
+        } satisfies ExtensionMessage) as CaptureResult | undefined;
 
-    // Send Volume
-    chrome.runtime.sendMessage({
-      type: 'SET_VOLUME',
-      tabId: currentTab.id, 
-      volume: volume,
-      muted: muted
-    });
+        if (applyCaptureResult(deviceResult)) {
+          const volumeResult = await chrome.runtime.sendMessage({
+            type: 'SET_VOLUME',
+            tabId: currentTab.id,
+            volume,
+            muted,
+          } satisfies ExtensionMessage) as CaptureResult | undefined;
+          applyCaptureResult(volumeResult);
+        }
+      } catch (error) {
+        console.error('Failed to apply capture settings:', error);
+        applyCaptureResult({ status: 'error', error: String(error) });
+      }
+    }
 
     // Save Settings
     if (currentTab.url) {

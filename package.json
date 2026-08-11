@@ -2,11 +2,12 @@
   "name": "Tab Audio Selector",
   "description": "Tab Audio Selector",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
+    "test": "vitest run",
     "build": "BUILD_TARGET=manual wxt build",
     "build:firefox": "BUILD_TARGET=manual wxt build -b firefox",
     "zip": "wxt zip",
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@tsconfig/svelte": "^5.0.6",
+    "@types/chrome": "^0.2.5",
     "@wxt-dev/module-svelte": "^2.0.4",
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",
@@ -26,6 +28,7 @@
     "tailwindcss-cli": "^0.1.2",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
+    "vitest": "^4.1.10",
     "wxt": "^0.20.6"
   }
 }

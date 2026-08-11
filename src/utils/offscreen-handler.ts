@@ -1,4 +1,9 @@
-import { ExtensionMessage } from '@/utils/messaging';
+import type {
+  AudioSettings,
+  CaptureResult,
+  CaptureStatus,
+  ExtensionMessage,
+} from '@/utils/messaging';
 
 // Map tabId -> AudioContext/Nodes
 interface AudioSession {
@@ -11,21 +16,39 @@ interface AudioSession {
 }
 
 const sessions = new Map<number, AudioSession>();
+const desiredSettings = new Map<number, Partial<AudioSettings>>();
+const defaultSettings: AudioSettings = {
+  deviceId: 'default',
+  volume: 1,
+  muted: false,
+};
 
-chrome.runtime.onMessage.addListener(async (message: ExtensionMessage, sender, sendResponse) => {
-  if (message.type === 'START_CAPTURE') {
-    await startCapture(message.tabId, message.streamId);
+chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+  if (message.type === 'START_CAPTURE' && message.streamId) {
+    return startCapture(message.tabId, message.streamId, message.settings);
   } else if (message.type === 'SET_VOLUME') {
     setVolume(message.tabId, message.volume, message.muted);
+    return Promise.resolve({
+      status: sessions.has(message.tabId) ? 'active' : 'pending',
+    } satisfies CaptureResult);
   } else if (message.type === 'SET_DEVICE') {
-    await setDevice(message.tabId, message.deviceId);
+    return setDevice(message.tabId, message.deviceId);
   }
 });
 
-async function startCapture(tabId: number, streamId: string) {
+async function startCapture(
+  tabId: number,
+  streamId: string,
+  settings?: AudioSettings,
+): Promise<CaptureResult> {
   try {
-    // If session exists, close it first
-    stopCapture(tabId);
+    const pendingSettings = desiredSettings.get(tabId);
+    desiredSettings.set(tabId, {
+      ...defaultSettings,
+      ...settings,
+      ...pendingSettings,
+    });
+    stopCapture(tabId, false);
 
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -47,61 +70,109 @@ async function startCapture(tabId: number, streamId: string) {
     gain.connect(destination);
 
     audioElement.srcObject = destination.stream;
+    sessions.set(tabId, { context, source, gain, stream, destination, audioElement });
+
+    stream.getTracks().forEach((track) => {
+      track.addEventListener('ended', () => {
+        if (sessions.get(tabId)?.stream === stream) {
+          stopCapture(tabId);
+          notifyCaptureStatus(tabId, 'needs_action');
+        }
+      });
+    });
+
+    applyVolume(tabId);
+    await applyDevice(tabId);
     await audioElement.play();
 
-    // Monitor stream ended (tab closed or capture stopped)
-    stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-      stopCapture(tabId);
-    });
-    
-    // Audio tracks might also end
-    stream.getAudioTracks()[0]?.addEventListener('ended', () => {
-        stopCapture(tabId);
-    });
-
-    sessions.set(tabId, { context, source, gain, stream, destination, audioElement });
     console.log(`Started capture for tab ${tabId}`);
+    notifyCaptureStatus(tabId, 'active');
+    return { status: 'active' };
 
   } catch (err) {
+    stopCapture(tabId, false);
     console.error(`Failed to capture tab ${tabId}:`, err);
+    const error = getErrorMessage(err);
+    notifyCaptureStatus(tabId, 'error', error);
+    return { status: 'error', error };
   }
 }
 
-function stopCapture(tabId: number) {
+function notifyCaptureStatus(tabId: number, status: CaptureStatus, error?: string) {
+  void chrome.runtime.sendMessage({
+    type: 'CAPTURE_STATUS',
+    tabId,
+    status,
+    error,
+  } satisfies ExtensionMessage).catch((sendError) => {
+    console.error('Failed to report capture status:', sendError);
+  });
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function stopCapture(tabId: number, clearSettings = true) {
   const session = sessions.get(tabId);
   if (session) {
+    sessions.delete(tabId);
     session.stream.getTracks().forEach(t => t.stop());
     session.audioElement.pause();
     session.audioElement.srcObject = null;
     session.context.close();
-    sessions.delete(tabId);
     console.log(`Stopped capture for tab ${tabId}`);
+  }
+
+  if (clearSettings) {
+    desiredSettings.delete(tabId);
   }
 }
 
 function setVolume(tabId: number, volume: number, muted: boolean) {
+  desiredSettings.set(tabId, {
+    ...desiredSettings.get(tabId),
+    volume,
+    muted,
+  });
+  applyVolume(tabId);
+}
+
+function applyVolume(tabId: number) {
+  const settings = desiredSettings.get(tabId);
   const session = sessions.get(tabId);
-  if (session) {
-    // Smooth transition
+  if (session && settings?.volume !== undefined && settings.muted !== undefined) {
     const currentTime = session.context.currentTime;
-    const targetValue = muted ? 0 : volume;
+    const targetValue = settings.muted ? 0 : settings.volume;
     session.gain.gain.setTargetAtTime(targetValue, currentTime, 0.1);
   }
 }
 
-async function setDevice(tabId: number, deviceId: string) {
+async function setDevice(tabId: number, deviceId: string): Promise<CaptureResult> {
+  desiredSettings.set(tabId, {
+    ...desiredSettings.get(tabId),
+    deviceId,
+  });
+  try {
+    await applyDevice(tabId);
+    return { status: sessions.has(tabId) ? 'active' : 'pending' };
+  } catch (error) {
+    console.error('Failed to setSinkId on AudioElement', error);
+    const errorMessage = getErrorMessage(error);
+    notifyCaptureStatus(tabId, 'error', errorMessage);
+    return { status: 'error', error: errorMessage };
+  }
+}
+
+async function applyDevice(tabId: number) {
+  const settings = desiredSettings.get(tabId);
   const session = sessions.get(tabId);
-  if (session) {
-    const element = session.audioElement as any;
-    if (element.setSinkId) {
-        try {
-            await element.setSinkId(deviceId);
-            console.log(`Set device for tab ${tabId} to ${deviceId}`);
-        } catch(e) {
-            console.error("Failed to setSinkId on AudioElement", e);
-        }
+  if (session && settings?.deviceId) {
+    if (session.audioElement.setSinkId) {
+      await session.audioElement.setSinkId(settings.deviceId);
+      console.log(`Set device for tab ${tabId} to ${settings.deviceId}`);
     } else {
-        console.warn("HTMLMediaElement.prototype.setSinkId is not supported in this environment.");
+      throw new Error('HTMLMediaElement.prototype.setSinkId is not supported in this environment.');
     }
   }
 }
