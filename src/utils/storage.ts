@@ -2,6 +2,7 @@ import { storage } from '#imports';
 
 export interface PageAudioSetting {
   deviceId: string | null;
+  /** Volume gain: 0.0 to 5.0 (500%). Default is 1.0 (100%). */
   volume: number;
   muted: boolean;
   timestamp: number;

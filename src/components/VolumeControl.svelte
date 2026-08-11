@@ -1,31 +1,44 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { t } from '@/utils/i18n';
+  import { VOLUME_DEFAULT, VOLUME_MAX, VOLUME_MIN, clampVolume } from '@/utils/volume';
 
-  export let volume: number = 1.0; // 0.0 to 1.0
+  export let volume: number = VOLUME_DEFAULT;
   export let muted: boolean = false;
   export let disabled = false;
 
   const dispatch = createEventDispatcher<{ 
     volumeChange: number;
     muteChange: boolean;
+    reset: void;
   }>();
+
+  $: isBoosted = volume > VOLUME_DEFAULT;
+  $: isAtDefault = !muted && volume === VOLUME_DEFAULT;
+  $: markerPercent = (VOLUME_DEFAULT / VOLUME_MAX) * 100;
 
   function handleSliderChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    const newVal = parseFloat(target.value);
+    const newVal = clampVolume(parseFloat(target.value));
     dispatch('volumeChange', newVal);
   }
 
   function toggleMute() {
     dispatch('muteChange', !muted);
   }
+
+  function resetToDefault() {
+    if (isAtDefault || disabled) return;
+    dispatch('reset');
+  }
 </script>
 
 <div class="volume-control space-y-2">
   <div class="flex items-center justify-between">
     <label for="volume-slider" class="text-sm font-medium text-gray-700 dark:text-gray-300">{t('volume')}</label>
-    <span class="text-xs text-gray-500 dark:text-gray-400">{Math.round(volume * 100)}%</span>
+    <span class="text-xs {isBoosted ? 'text-amber-600 dark:text-amber-500 font-medium' : 'text-gray-500 dark:text-gray-400'}">
+      {Math.round(volume * 100)}%
+    </span>
   </div>
   
   <div class="flex items-center space-x-3">
@@ -50,17 +63,79 @@
       {/if}
     </button>
     
-    <input
-      id="volume-slider"
-      type="range"
-      min="0"
-      max="1"
-      step="0.01"
-      class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-      value={volume}
-      on:input={handleSliderChange}
-      {disabled}
-    />
+    <div class="relative w-full">
+      <div
+        class="pointer-events-none absolute top-1/2 z-10 h-3 w-0.5 -translate-y-1/2 rounded-sm bg-gray-400 dark:bg-gray-500"
+        style="left: {markerPercent}%"
+        aria-hidden="true"
+        title="100%"
+      ></div>
+      <input
+        id="volume-slider"
+        type="range"
+        min={VOLUME_MIN}
+        max={VOLUME_MAX}
+        step="0.01"
+        class="volume-slider w-full h-2 rounded-lg appearance-none cursor-pointer {isBoosted ? 'volume-slider--boosted' : ''}"
+        value={volume}
+        on:input={handleSliderChange}
+        {disabled}
+      />
+    </div>
+
+    <button
+      type="button"
+      class="shrink-0 px-2 py-1 text-xs font-medium rounded border border-gray-300 dark:border-gray-600
+        text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+        disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+      on:click={resetToDefault}
+      disabled={disabled || isAtDefault}
+      aria-label={t('resetVolume')}
+      title={t('resetVolume')}
+    >
+      100%
+    </button>
   </div>
 </div>
 
+<style>
+  .volume-slider {
+    background: linear-gradient(
+      to right,
+      #e5e7eb 0%,
+      #e5e7eb 20%,
+      #fde68a 20%,
+      #fde68a 100%
+    );
+  }
+
+  :global(.dark) .volume-slider {
+    background: linear-gradient(
+      to right,
+      #374151 0%,
+      #374151 20%,
+      #78350f 20%,
+      #78350f 100%
+    );
+  }
+
+  .volume-slider--boosted {
+    background: linear-gradient(
+      to right,
+      #e5e7eb 0%,
+      #e5e7eb 20%,
+      #fbbf24 20%,
+      #fbbf24 100%
+    );
+  }
+
+  :global(.dark) .volume-slider--boosted {
+    background: linear-gradient(
+      to right,
+      #374151 0%,
+      #374151 20%,
+      #d97706 20%,
+      #d97706 100%
+    );
+  }
+</style>

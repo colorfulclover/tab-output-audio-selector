@@ -9,11 +9,12 @@
   import { hasNonDefaultAudioSettings } from '@/utils/capture-settings';
   import { getAudioSettings, saveAudioSettings } from '@/utils/storage';
   import { t } from '@/utils/i18n';
+  import { VOLUME_DEFAULT, clampVolume } from '@/utils/volume';
 
   let currentTab: TabInfo | null = null;
   let devices: DeviceInfo[] = [];
   let selectedDeviceId: string | null = null;
-  let volume: number = 1.0;
+  let volume: number = VOLUME_DEFAULT;
   let muted: boolean = false;
   let isLoading = true;
   let permissionDenied = false;
@@ -47,7 +48,7 @@
           const saved = await getAudioSettings(currentTab.url);
           if (saved) {
             selectedDeviceId = saved.deviceId;
-            volume = saved.volume;
+            volume = clampVolume(saved.volume);
             muted = saved.muted;
             if (hasNonDefaultAudioSettings(saved)) {
               await startCapture();
@@ -100,12 +101,18 @@
   }
 
   function handleVolumeChange(event: CustomEvent<number>) {
-    volume = event.detail;
+    volume = clampVolume(event.detail);
     void applySettings();
   }
 
   function handleMuteChange(event: CustomEvent<boolean>) {
     muted = event.detail;
+    void applySettings();
+  }
+
+  function handleVolumeReset() {
+    volume = VOLUME_DEFAULT;
+    muted = false;
     void applySettings();
   }
 
@@ -227,6 +234,7 @@
           {muted} 
           on:volumeChange={handleVolumeChange}
           on:muteChange={handleMuteChange}
+          on:reset={handleVolumeReset}
         />
       </div>
     {:else}

@@ -78,7 +78,30 @@ test('only non-default saved settings require capture restoration', () => {
   }), true);
   assert.equal(hasNonDefaultAudioSettings({
     deviceId: 'default',
+    volume: 2.5,
+    muted: false,
+  }), true);
+  assert.equal(hasNonDefaultAudioSettings({
+    deviceId: 'default',
     volume: 1,
     muted: true,
   }), true);
+});
+
+test('loadCaptureSettings clamps volume into the supported range', async () => {
+  const settings = await loadCaptureSettings(7, {
+    getTab: async () => ({ url: 'https://example.com/' }),
+    getAudioSettings: async () => ({
+      deviceId: 'sink-b',
+      volume: 9,
+      muted: false,
+      timestamp: 1,
+    }),
+  });
+
+  assert.deepEqual(settings, {
+    deviceId: 'sink-b',
+    volume: 5,
+    muted: false,
+  });
 });

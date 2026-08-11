@@ -76,11 +76,12 @@ root/
 *   **処理フロー**:
     1.  `navigator.mediaDevices.getUserMedia({ audio: { chromeMediaSource: 'tab', ... } })` でストリームを取得。
     2.  `AudioContext` を作成。
-    3.  `MediaStreamSource` -> `GainNode` (音量制御) -> `MediaStreamDestination` と接続。
+    3.  `MediaStreamSource` -> `GainNode` (音量制御, 0.0〜5.0) -> `DynamicsCompressorNode` (リミッター) -> `MediaStreamDestination` と接続。
     4.  `HTMLAudioElement` (`new Audio()`) を作成し、`srcObject` に `destination.stream` を設定。
-    5.  保存 / 保留中の設定を適用（`applyVolume` / `applyDevice`）。
+    5.  保存 / 保留中の設定を適用（`applyVolume` / `applyDevice`）。音量は `clampVolume` で 0.0〜5.0 に正規化する。
     6.  `audioElement.play()` で再生。
     7.  トラック終了時はセッションを破棄し、`CAPTURE_STATUS: needs_action` を通知する。
+*   **Compressor パラメータ** (リミッター寄り): `threshold: -3`, `knee: 6`, `ratio: 12`, `attack: 0.003`, `release: 0.25`
 *   **応答**: `START_CAPTURE` / `SET_VOLUME` / `SET_DEVICE` はいずれも `CaptureResult` を返す。
 
 ### 2.6 メッセージングプロトコル (`utils/messaging.ts`)
@@ -115,7 +116,7 @@ export type ExtensionMessage =
 ```typescript
 interface PageAudioSetting {
   deviceId: string | null;
-  volume: number;
+  volume: number; // 0.0 - 5.0 (default 1.0)
   muted: boolean;
   timestamp: number;
 }

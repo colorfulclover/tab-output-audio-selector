@@ -4,12 +4,14 @@ import type {
   CaptureStatus,
   ExtensionMessage,
 } from '@/utils/messaging';
+import { VOLUME_DEFAULT, clampVolume } from './volume';
 
 // Map tabId -> AudioContext/Nodes
 interface AudioSession {
   context: AudioContext;
   source: MediaStreamAudioSourceNode;
   gain: GainNode;
+  compressor: DynamicsCompressorNode;
   stream: MediaStream;
   destination: MediaStreamAudioDestinationNode;
   audioElement: HTMLAudioElement;
@@ -19,9 +21,19 @@ const sessions = new Map<number, AudioSession>();
 const desiredSettings = new Map<number, Partial<AudioSettings>>();
 const defaultSettings: AudioSettings = {
   deviceId: 'default',
-  volume: 1,
+  volume: VOLUME_DEFAULT,
   muted: false,
 };
+
+function createLimiter(context: AudioContext): DynamicsCompressorNode {
+  const compressor = context.createDynamicsCompressor();
+  compressor.threshold.value = -3;
+  compressor.knee.value = 6;
+  compressor.ratio.value = 12;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.25;
+  return compressor;
+}
 
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   if (message.type === 'START_CAPTURE' && message.streamId) {
@@ -43,10 +55,14 @@ async function startCapture(
 ): Promise<CaptureResult> {
   try {
     const pendingSettings = desiredSettings.get(tabId);
-    desiredSettings.set(tabId, {
+    const mergedSettings = {
       ...defaultSettings,
       ...settings,
       ...pendingSettings,
+    };
+    desiredSettings.set(tabId, {
+      ...mergedSettings,
+      volume: clampVolume(mergedSettings.volume),
     });
     stopCapture(tabId, false);
 
@@ -63,14 +79,16 @@ async function startCapture(
     const context = new AudioContext();
     const source = context.createMediaStreamSource(stream);
     const gain = context.createGain();
+    const compressor = createLimiter(context);
     const destination = context.createMediaStreamDestination();
     const audioElement = new Audio();
 
     source.connect(gain);
-    gain.connect(destination);
+    gain.connect(compressor);
+    compressor.connect(destination);
 
     audioElement.srcObject = destination.stream;
-    sessions.set(tabId, { context, source, gain, stream, destination, audioElement });
+    sessions.set(tabId, { context, source, gain, compressor, stream, destination, audioElement });
 
     stream.getTracks().forEach((track) => {
       track.addEventListener('ended', () => {
@@ -132,7 +150,7 @@ function stopCapture(tabId: number, clearSettings = true) {
 function setVolume(tabId: number, volume: number, muted: boolean) {
   desiredSettings.set(tabId, {
     ...desiredSettings.get(tabId),
-    volume,
+    volume: clampVolume(volume),
     muted,
   });
   applyVolume(tabId);
@@ -143,7 +161,7 @@ function applyVolume(tabId: number) {
   const session = sessions.get(tabId);
   if (session && settings?.volume !== undefined && settings.muted !== undefined) {
     const currentTime = session.context.currentTime;
-    const targetValue = settings.muted ? 0 : settings.volume;
+    const targetValue = settings.muted ? 0 : clampVolume(settings.volume);
     session.gain.gain.setTargetAtTime(targetValue, currentTime, 0.1);
   }
 }
