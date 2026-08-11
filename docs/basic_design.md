@@ -41,10 +41,11 @@ graph TD
 *   **Background Service Worker**
     *   拡張機能のバックエンドとして動作。
     *   Popup からの `START_CAPTURE` を受け、`chrome.tabCapture.getMediaStreamId` と保存設定読み込みを行い Offscreen へ渡す。
-    *   `Offscreen Document` のライフサイクルを管理する。
+    *   `Offscreen Document` のライフサイクルを管理する（`USER_MEDIA` reason。消失時は 1 回リトライ）。
     *   ブラウザ起動時 / タブ更新時に、復元が必要なタブへツールバーバッジ（`!`）を表示する。
 *   **Capture Lifecycle / Capture Settings**
     *   キャプチャ開始の重複防止、保存設定の適用、要操作インジケータの更新を担う。
+    *   Chrome 側の stale `pending` をポーリングし、固着時は `needs_action` へ落とす。
 *   **Offscreen Document (`offscreen.html` / `utils/offscreen-handler.ts`)**
     *   Background から受け取ったストリームIDを使用して `getUserMedia` を実行し、タブの音声をキャプチャする。
     *   **Web Audio API** を使用して音量調整 (`GainNode`) を行う。
@@ -59,18 +60,22 @@ graph TD
 1.  **操作**: ユーザーがPopupで音量変更やデバイス変更を行う。
 2.  **キャプチャ開始**: 未キャプチャなら Popup -> Background へ `START_CAPTURE`（`streamId` なし）を送信する。
 3.  **中継**: Background が streamId と保存設定を付与し、Offscreen Document へ転送する。
+    *   Offscreen が消失している場合は再作成して 1 回再送する。
 4.  **適用**: キャプチャ成功後、Popup が `SET_DEVICE` / `SET_VOLUME` を送信し、各操作は `CaptureResult` を返す。
-5.  **処理**: Offscreen Document 内の `AudioContext` が音声を処理し、`HTMLAudioElement` が指定デバイスへ出力する。
+5.  **保存**: `SET_DEVICE` / `SET_VOLUME` まで成功したときだけ `chrome.storage.local` に保存する。
+6.  **処理**: Offscreen Document 内の `AudioContext` が音声を処理し、`HTMLAudioElement` が指定デバイスへ出力する。
 
 ### 2.2 設定保存と復元フロー
-1.  **保存**: ユーザーが設定を変更した際、Popup が `chrome.storage.local` にオリジンをキーとして設定を保存する。
+1.  **保存**: キャプチャと設定適用が成功したときのみ、Popup がオリジン単位で設定を保存する（失敗時は storage を更新しない）。
 2.  **Popup からの復元**:
     *   ユーザーが再度同じオリジンのページを開き、Popup を開く。
     *   非デフォルト設定が存在する場合、自動的にキャプチャを開始し、設定値を適用する。
 3.  **ブラウザ再起動後の案内**:
     *   Chrome 再起動後、Service Worker は自動ではキャプチャを再開できない（ユーザー操作が必要）。
     *   代わりに、非デフォルト設定が保存されているタブのアクションバッジに `!` を表示し、Popup 操作での復元を促す。
-4.  **キャプチャ再構築時の保持**:
+4.  **stale pending の扱い**:
+    *   `tabCapture` が `pending` のまま固着した場合は短時間待機後に `needs_action` とし、再操作を促す。
+5.  **キャプチャ再構築時の保持**:
     *   ストリーム再取得などでセッションが作り直されても、Offscreen 側の `desiredSettings` によりデバイス / 音量を維持する。
 
 ## 3. データモデル設計 (Data Persistence)

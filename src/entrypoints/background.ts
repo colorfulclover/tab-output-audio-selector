@@ -1,7 +1,10 @@
 import type { CaptureResult, CaptureStatus, ExtensionMessage } from '@/utils/messaging';
 import { createCaptureLifecycle } from '@/utils/capture-lifecycle';
 import { loadCaptureSettings } from '@/utils/capture-settings';
+import { sendWithOffscreenRetry } from '@/utils/offscreen-messaging';
 import { getAudioSettings } from '@/utils/storage';
+
+const OFFSCREEN_PATH = 'offscreen.html';
 
 export default defineBackground(() => {
   const lifecycle = createCaptureLifecycle({
@@ -13,18 +16,26 @@ export default defineBackground(() => {
       getAudioSettings,
     }),
     getMediaStreamId: async (tabId) => {
-      await setupOffscreenDocument('offscreen.html');
+      await setupOffscreenDocument(OFFSCREEN_PATH);
       return chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
     },
     startOffscreenCapture: async (tabId, streamId, settings) => {
-      const result = await chrome.runtime.sendMessage({
-        type: 'START_CAPTURE',
-        tabId,
-        streamId,
-        settings,
-      } satisfies ExtensionMessage) as CaptureResult | undefined;
+      try {
+        const result = await sendWithOffscreenRetry(
+          () => chrome.runtime.sendMessage({
+            type: 'START_CAPTURE',
+            tabId,
+            streamId,
+            settings,
+          } satisfies ExtensionMessage) as Promise<CaptureResult | undefined>,
+          () => setupOffscreenDocument(OFFSCREEN_PATH),
+        );
 
-      return result ?? { status: 'error', error: 'Offscreen document did not respond.' };
+        return result ?? { status: 'error', error: 'Offscreen document did not respond.' };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { status: 'error', error: message };
+      }
     },
     markNeedsAction,
     clearIndicator,

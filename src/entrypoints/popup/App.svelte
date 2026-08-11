@@ -151,36 +151,36 @@
 
     const captureReady = await startCapture();
 
-    if (captureReady) {
-      try {
-        const deviceResult = await chrome.runtime.sendMessage({
-          type: 'SET_DEVICE',
-          tabId: currentTab.id,
-          deviceId: selectedDeviceId || 'default',
-        } satisfies ExtensionMessage) as CaptureResult | undefined;
+    if (!captureReady) return;
 
-        if (applyCaptureResult(deviceResult)) {
-          const volumeResult = await chrome.runtime.sendMessage({
-            type: 'SET_VOLUME',
-            tabId: currentTab.id,
-            volume,
-            muted,
-          } satisfies ExtensionMessage) as CaptureResult | undefined;
-          applyCaptureResult(volumeResult);
-        }
-      } catch (error) {
-        console.error('Failed to apply capture settings:', error);
-        applyCaptureResult({ status: 'error', error: String(error) });
-      }
-    }
-
-    // Save Settings
-    if (currentTab.url) {
-      await saveAudioSettings(currentTab.url, {
+    try {
+      const deviceResult = await chrome.runtime.sendMessage({
+        type: 'SET_DEVICE',
+        tabId: currentTab.id,
         deviceId: selectedDeviceId || 'default',
-        volume: volume,
-        muted: muted
-      });
+      } satisfies ExtensionMessage) as CaptureResult | undefined;
+
+      if (!applyCaptureResult(deviceResult)) return;
+
+      const volumeResult = await chrome.runtime.sendMessage({
+        type: 'SET_VOLUME',
+        tabId: currentTab.id,
+        volume,
+        muted,
+      } satisfies ExtensionMessage) as CaptureResult | undefined;
+
+      if (!applyCaptureResult(volumeResult)) return;
+
+      if (currentTab.url) {
+        await saveAudioSettings(currentTab.url, {
+          deviceId: selectedDeviceId || 'default',
+          volume: volume,
+          muted: muted
+        });
+      }
+    } catch (error) {
+      console.error('Failed to apply capture settings:', error);
+      applyCaptureResult({ status: 'error', error: String(error) });
     }
   }
 </script>
